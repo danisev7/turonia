@@ -1,0 +1,48 @@
+"use client";
+
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Users, UserPlus, Clock } from "lucide-react";
+
+interface KPICardsProps {
+  total: number;
+  newLast7Days: number;
+  pending: number;
+}
+
+export function KPICards({ total, newLast7Days, pending }: KPICardsProps) {
+  const cards = [
+    {
+      title: "Total candidats",
+      value: total,
+      icon: Users,
+    },
+    {
+      title: "Nous (últims 7 dies)",
+      value: newLast7Days,
+      icon: UserPlus,
+    },
+    {
+      title: "Pendents de revisar",
+      value: pending,
+      icon: Clock,
+    },
+  ];
+
+  return (
+    <div className="grid gap-4 md:grid-cols-3">
+      {cards.map((card) => (
+        <Card key={card.title}>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              {card.title}
+            </CardTitle>
+            <card.icon className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold">{card.value}</div>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+}
