@@ -21,6 +21,16 @@ async function handleCronRequest(request: NextRequest) {
       );
     }
 
+    // Forward optional params (after, before, maxResults) from query string
+    const after = request.nextUrl.searchParams.get("after") || undefined;
+    const before = request.nextUrl.searchParams.get("before") || undefined;
+    const maxResults = request.nextUrl.searchParams.get("maxResults") || undefined;
+
+    const bodyPayload: Record<string, unknown> = {};
+    if (after) bodyPayload.after = after;
+    if (before) bodyPayload.before = before;
+    if (maxResults) bodyPayload.maxResults = parseInt(maxResults);
+
     const response = await fetch(
       `${supabaseUrl}/functions/v1/process-emails`,
       {
@@ -29,6 +39,7 @@ async function handleCronRequest(request: NextRequest) {
           Authorization: `Bearer ${serviceRoleKey}`,
           "Content-Type": "application/json",
         },
+        body: JSON.stringify(bodyPayload),
       }
     );
 

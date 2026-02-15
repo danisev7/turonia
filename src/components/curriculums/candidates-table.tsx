@@ -19,6 +19,7 @@ interface Candidate {
   last_name: string | null;
   email: string;
   phone: string | null;
+  teaching_months: number | null;
   status: string;
   evaluation: string | null;
   reception_date: string;
@@ -44,6 +45,13 @@ const STAGE_LABELS: Record<string, string> = {
   primaria: "Primària",
   secundaria: "Secundària",
   altres: "Altres",
+};
+
+const STAGE_COLORS: Record<string, string> = {
+  infantil: "bg-emerald-100 text-emerald-800 border-emerald-200",
+  primaria: "bg-blue-100 text-blue-800 border-blue-200",
+  secundaria: "bg-violet-100 text-violet-800 border-violet-200",
+  altres: "bg-stone-100 text-stone-700 border-stone-200",
 };
 
 const EVAL_LABELS: Record<string, string> = {
@@ -142,6 +150,13 @@ export function CandidatesTable({
               <TableHead className="text-xs">Etapa</TableHead>
               <TableHead className="text-xs">Idiomes</TableHead>
               <SortableHeader
+                label="Exp."
+                column="teaching_months"
+                currentSort={sortBy}
+                currentOrder={sortOrder}
+                onSort={onSort}
+              />
+              <SortableHeader
                 label="Data recepció"
                 column="reception_date"
                 currentSort={sortBy}
@@ -181,7 +196,7 @@ export function CandidatesTable({
           <TableBody>
             {candidates.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={11} className="text-center py-8 text-muted-foreground">
                   No s&apos;han trobat candidats
                 </TableCell>
               </TableRow>
@@ -206,8 +221,8 @@ export function CandidatesTable({
                       {candidate.candidate_stages?.map((s) => (
                         <Badge
                           key={s.stage}
-                          variant="secondary"
-                          className="text-xs"
+                          variant="outline"
+                          className={`text-xs ${STAGE_COLORS[s.stage] || ""}`}
                         >
                           {STAGE_LABELS[s.stage] || s.stage}
                         </Badge>
@@ -227,6 +242,11 @@ export function CandidatesTable({
                         </Badge>
                       ))}
                     </div>
+                  </TableCell>
+                  <TableCell className="text-sm text-right">
+                    {candidate.teaching_months != null
+                      ? (candidate.teaching_months / 12).toFixed(1)
+                      : "—"}
                   </TableCell>
                   <TableCell className="text-sm">
                     {formatDate(candidate.reception_date)}

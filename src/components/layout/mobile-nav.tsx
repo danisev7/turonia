@@ -14,7 +14,7 @@ import {
 
 const navigation = [
   {
-    name: "Panell de control",
+    name: "Tauler de Control",
     href: "/dashboard",
     icon: LayoutDashboard,
   },

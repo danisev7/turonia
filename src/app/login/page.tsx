@@ -11,8 +11,8 @@ import {
   CardContent,
   CardDescription,
   CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
+import Image from "next/image";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -45,10 +45,16 @@ export default function LoginPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-muted/40 px-4">
       <Card className="w-full max-w-sm">
-        <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold">Turonia</CardTitle>
-          <CardDescription>
-            Escola el Turó — Gestió de Currículums
+        <CardHeader className="flex flex-col items-center gap-3 text-center">
+          <Image
+            src="/logo.png"
+            alt="Escola El Turó"
+            width={220}
+            height={70}
+            priority
+          />
+          <CardDescription className="text-base">
+            La IA de l&apos;Escola el Turó
           </CardDescription>
         </CardHeader>
         <CardContent>

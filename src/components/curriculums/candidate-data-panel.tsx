@@ -21,6 +21,13 @@ const STAGE_LABELS: Record<string, string> = {
   altres: "Altres",
 };
 
+const STAGE_COLORS: Record<string, string> = {
+  infantil: "bg-emerald-100 text-emerald-800 border-emerald-200",
+  primaria: "bg-blue-100 text-blue-800 border-blue-200",
+  secundaria: "bg-violet-100 text-violet-800 border-violet-200",
+  altres: "bg-stone-100 text-stone-700 border-stone-200",
+};
+
 interface CandidateDataPanelProps {
   candidate: {
     id: string;
@@ -140,7 +147,7 @@ export function CandidateDataPanel({
           <div className="flex flex-wrap gap-1 mt-1">
             {candidate.candidate_stages?.length > 0
               ? candidate.candidate_stages.map((s) => (
-                  <Badge key={s.stage} variant="secondary" className="text-xs">
+                  <Badge key={s.stage} variant="outline" className={`text-xs ${STAGE_COLORS[s.stage] || ""}`}>
                     {STAGE_LABELS[s.stage] || s.stage}
                   </Badge>
                 ))

@@ -40,6 +40,13 @@ interface CandidatesFiltersProps {
   onFiltersChange: (filters: Filters) => void;
 }
 
+const GROUP_COLORS: Record<string, { active: string; dot: string }> = {
+  Etapa: { active: "bg-teal-600 text-white hover:bg-teal-700", dot: "bg-teal-500" },
+  Estat: { active: "bg-sky-600 text-white hover:bg-sky-700", dot: "bg-sky-500" },
+  Avaluació: { active: "bg-amber-500 text-white hover:bg-amber-600", dot: "bg-amber-500" },
+  Idiomes: { active: "bg-violet-600 text-white hover:bg-violet-700", dot: "bg-violet-500" },
+};
+
 function ToggleGroup({
   label,
   options,
@@ -51,15 +58,19 @@ function ToggleGroup({
   selected: string[];
   onToggle: (value: string) => void;
 }) {
+  const colors = GROUP_COLORS[label] || GROUP_COLORS.Etapa;
   return (
-    <div className="space-y-1">
-      <span className="text-xs font-medium text-muted-foreground">{label}</span>
+    <div className="space-y-1.5">
+      <div className="flex items-center gap-1.5">
+        <span className={`h-2 w-2 rounded-full ${colors.dot}`} />
+        <span className="text-xs font-semibold text-foreground/70">{label}</span>
+      </div>
       <div className="flex flex-wrap gap-1">
         {options.map((opt) => (
           <Badge
             key={opt.value}
             variant={selected.includes(opt.value) ? "default" : "outline"}
-            className="cursor-pointer text-xs"
+            className={`cursor-pointer text-xs ${selected.includes(opt.value) ? colors.active : ""}`}
             onClick={() => onToggle(opt.value)}
           >
             {opt.label}
@@ -161,10 +172,11 @@ export function CandidatesFilters({
           onToggle={(v) => toggleArrayFilter("stages", v)}
         />
 
-        <div className="space-y-1">
-          <span className="text-xs font-medium text-muted-foreground">
-            Estat
-          </span>
+        <div className="space-y-1.5">
+          <div className="flex items-center gap-1.5">
+            <span className="h-2 w-2 rounded-full bg-sky-500" />
+            <span className="text-xs font-semibold text-foreground/70">Estat</span>
+          </div>
           <div className="flex flex-wrap gap-1">
             {STATUSES.map((opt) => (
               <Badge
@@ -172,7 +184,7 @@ export function CandidatesFilters({
                 variant={
                   filters.status === opt.value ? "default" : "outline"
                 }
-                className="cursor-pointer text-xs"
+                className={`cursor-pointer text-xs ${filters.status === opt.value ? "bg-sky-600 text-white hover:bg-sky-700" : ""}`}
                 onClick={() =>
                   onFiltersChange({
                     ...filters,

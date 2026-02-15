@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { LayoutDashboard, FileText, ChevronLeft, ChevronRight } from "lucide-react";
@@ -9,7 +10,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 
 const navigation = [
   {
-    name: "Panell de control",
+    name: "Tauler de Control",
     href: "/dashboard",
     icon: LayoutDashboard,
   },
@@ -35,10 +36,10 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
         collapsed ? "w-16" : "w-64"
       )}
     >
-      <div className="flex h-14 items-center border-b px-4">
+      <div className="flex h-14 items-center border-b border-sidebar-border px-4">
         {!collapsed && (
-          <Link href="/dashboard" className="font-bold text-lg">
-            Turonia
+          <Link href="/dashboard" className="flex items-center gap-2">
+            <Image src="/logo.png" alt="Escola El Turó" width={130} height={42} />
           </Link>
         )}
         <Button

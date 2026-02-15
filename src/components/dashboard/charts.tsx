@@ -23,6 +23,13 @@ interface ChartsProps {
   weeklyTrend: { week: string; count: number }[];
 }
 
+const STAGE_COLORS: Record<string, string> = {
+  Infantil: "#10b981",
+  Primària: "#3b82f6",
+  Secundària: "#8b5cf6",
+  Altres: "#78716c",
+};
+
 const EVAL_COLORS = ["#22c55e", "#3b82f6", "#f59e0b", "#ef4444"];
 
 export function DashboardCharts({
@@ -45,7 +52,11 @@ export function DashboardCharts({
               <XAxis dataKey="stage" fontSize={12} />
               <YAxis allowDecimals={false} />
               <Tooltip />
-              <Bar dataKey="count" name="Candidats" fill="var(--chart-1)" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="count" name="Candidats" radius={[4, 4, 0, 0]}>
+                {byStage.map((entry) => (
+                  <Cell key={entry.stage} fill={STAGE_COLORS[entry.stage] || "#94a3b8"} />
+                ))}
+              </Bar>
             </BarChart>
           </ResponsiveContainer>
         </CardContent>
