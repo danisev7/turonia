@@ -31,6 +31,18 @@ async function handleCronRequest(request: NextRequest) {
     if (before) bodyPayload.before = before;
     if (maxResults) bodyPayload.maxResults = parseInt(maxResults);
 
+    // Pass Gmail credentials from Vercel env to Edge Function
+    const gmailClientId = process.env.CLIENT_ID_OAUTH;
+    const gmailClientSecret = process.env.CLIENT_SECRET_OAUTH;
+    const gmailRefreshToken = process.env.REFRESH_TOKEN_OAUTH;
+    if (gmailClientId && gmailClientSecret && gmailRefreshToken) {
+      bodyPayload.gmailCredentials = {
+        client_id: gmailClientId,
+        client_secret: gmailClientSecret,
+        refresh_token: gmailRefreshToken,
+      };
+    }
+
     const response = await fetch(
       `${supabaseUrl}/functions/v1/process-emails`,
       {
