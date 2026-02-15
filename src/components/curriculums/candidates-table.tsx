@@ -18,10 +18,10 @@ interface Candidate {
   first_name: string | null;
   last_name: string | null;
   email: string;
-  phone: string | null;
   teaching_months: number | null;
   status: string;
   evaluation: string | null;
+  observations: string | null;
   reception_date: string;
   last_contact_date: string | null;
   last_response_date: string | null;
@@ -140,13 +140,6 @@ export function CandidatesTable({
                 currentOrder={sortOrder}
                 onSort={onSort}
               />
-              <SortableHeader
-                label="Telèfon"
-                column="phone"
-                currentSort={sortBy}
-                currentOrder={sortOrder}
-                onSort={onSort}
-              />
               <TableHead className="text-xs">Etapa</TableHead>
               <TableHead className="text-xs">Idiomes</TableHead>
               <SortableHeader
@@ -191,6 +184,7 @@ export function CandidatesTable({
                 currentOrder={sortOrder}
                 onSort={onSort}
               />
+              <TableHead className="text-xs">Observacions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -213,9 +207,6 @@ export function CandidatesTable({
                       .join(" ") || "—"}
                   </TableCell>
                   <TableCell className="text-sm">{candidate.email}</TableCell>
-                  <TableCell className="text-sm">
-                    {candidate.phone || "—"}
-                  </TableCell>
                   <TableCell>
                     <div className="flex flex-wrap gap-1">
                       {candidate.candidate_stages?.map((s) => (
@@ -278,6 +269,9 @@ export function CandidatesTable({
                     >
                       {candidate.status === "pendent" ? "Pendent" : "Vist"}
                     </Badge>
+                  </TableCell>
+                  <TableCell className="text-sm text-muted-foreground max-w-[200px] truncate">
+                    {candidate.observations || ""}
                   </TableCell>
                 </TableRow>
               ))

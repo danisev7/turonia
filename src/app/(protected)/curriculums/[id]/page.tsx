@@ -25,6 +25,7 @@ interface CandidateData {
   education_level: string | null;
   work_experience_summary: string | null;
   teaching_months: number | null;
+  specialty: string | null;
   status: string;
   evaluation: string | null;
   observations: string | null;
@@ -67,15 +68,6 @@ export default function CandidateDetailPage({
       setCandidate(candidateData);
       setEmails(Array.isArray(emailsData) ? emailsData : []);
       setLoading(false);
-
-      // Auto-mark as "vist" if currently "pendent"
-      if (candidateData.status === "pendent") {
-        fetch(`/api/candidates/${id}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ status: "vist" }),
-        });
-      }
     });
   }, [id]);
 

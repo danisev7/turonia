@@ -40,6 +40,7 @@ interface CandidateDataPanelProps {
     education_level: string | null;
     work_experience_summary: string | null;
     teaching_months: number | null;
+    specialty: string | null;
     status: string;
     evaluation: string | null;
     observations: string | null;
@@ -154,6 +155,13 @@ export function CandidateDataPanel({
               : "—"}
           </div>
         </div>
+
+        {candidate.specialty && (
+          <div>
+            <Label className="text-xs text-muted-foreground">Especialitat</Label>
+            <p className="text-sm">{candidate.specialty}</p>
+          </div>
+        )}
 
         <div>
           <Label className="text-xs text-muted-foreground">Idiomes</Label>
