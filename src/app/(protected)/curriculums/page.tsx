@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo, Suspense } from "react";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import {
   CandidatesFilters,
   type Filters,
@@ -8,26 +9,97 @@ import {
 import { CandidatesTable } from "@/components/curriculums/candidates-table";
 import { Skeleton } from "@/components/ui/skeleton";
 
-const INITIAL_FILTERS: Filters = {
-  search: "",
-  stages: [],
-  status: "",
-  evaluations: [],
-  languages: [],
-  dateFrom: "",
-  dateTo: "",
+const PARAM_DEFAULTS: Record<string, string> = {
+  page: "1",
+  sortBy: "reception_date",
+  sortOrder: "desc",
 };
 
-export default function CurriculumsPage() {
-  const [filters, setFilters] = useState<Filters>(INITIAL_FILTERS);
+function CurriculumsContent() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+
+  // Derive filter/sort/page state from URL search params
+  const filters: Filters = useMemo(
+    () => ({
+      search: searchParams.get("search") || "",
+      stages: searchParams.get("stages")?.split(",").filter(Boolean) || [],
+      status: searchParams.get("status") || "",
+      evaluations:
+        searchParams.get("evaluations")?.split(",").filter(Boolean) || [],
+      languages:
+        searchParams.get("languages")?.split(",").filter(Boolean) || [],
+      dateFrom: searchParams.get("dateFrom") || "",
+      dateTo: searchParams.get("dateTo") || "",
+    }),
+    [searchParams]
+  );
+
+  const page = parseInt(searchParams.get("page") || "1", 10);
+  const sortBy = searchParams.get("sortBy") || "reception_date";
+  const sortOrder = searchParams.get("sortOrder") || "desc";
+
+  // API response state (stays in useState)
   const [candidates, setCandidates] = useState<never[]>([]);
   const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [sortBy, setSortBy] = useState("reception_date");
-  const [sortOrder, setSortOrder] = useState("desc");
   const [loading, setLoading] = useState(true);
   const [availableLanguages, setAvailableLanguages] = useState<string[]>([]);
+
+  // Helper to update URL search params via router.replace
+  const updateParams = useCallback(
+    (updates: Record<string, string | undefined>) => {
+      const params = new URLSearchParams(searchParams.toString());
+      for (const [key, value] of Object.entries(updates)) {
+        if (!value || value === PARAM_DEFAULTS[key]) {
+          params.delete(key);
+        } else {
+          params.set(key, value);
+        }
+      }
+      const qs = params.toString();
+      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+    },
+    [searchParams, router, pathname]
+  );
+
+  const handleFiltersChange = useCallback(
+    (newFilters: Filters) => {
+      updateParams({
+        search: newFilters.search || undefined,
+        stages:
+          newFilters.stages.length > 0
+            ? newFilters.stages.join(",")
+            : undefined,
+        status: newFilters.status || undefined,
+        evaluations:
+          newFilters.evaluations.length > 0
+            ? newFilters.evaluations.join(",")
+            : undefined,
+        languages:
+          newFilters.languages.length > 0
+            ? newFilters.languages.join(",")
+            : undefined,
+        dateFrom: newFilters.dateFrom || undefined,
+        dateTo: newFilters.dateTo || undefined,
+        page: undefined, // Reset page on filter change
+      });
+    },
+    [updateParams]
+  );
+
+  function handleSort(column: string) {
+    if (sortBy === column) {
+      updateParams({ sortOrder: sortOrder === "asc" ? "desc" : "asc" });
+    } else {
+      updateParams({ sortBy: column, sortOrder: "desc" });
+    }
+  }
+
+  function handlePageChange(newPage: number) {
+    updateParams({ page: newPage === 1 ? undefined : newPage.toString() });
+  }
 
   const fetchCandidates = useCallback(async () => {
     setLoading(true);
@@ -71,20 +143,6 @@ export default function CurriculumsPage() {
     fetchCandidates();
   }, [fetchCandidates]);
 
-  // Reset page when filters change
-  useEffect(() => {
-    setPage(1);
-  }, [filters]);
-
-  function handleSort(column: string) {
-    if (sortBy === column) {
-      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
-    } else {
-      setSortBy(column);
-      setSortOrder("desc");
-    }
-  }
-
   return (
     <div className="space-y-4">
       <div>
@@ -95,7 +153,7 @@ export default function CurriculumsPage() {
       <CandidatesFilters
         filters={filters}
         availableLanguages={availableLanguages}
-        onFiltersChange={setFilters}
+        onFiltersChange={handleFiltersChange}
       />
 
       {loading ? (
@@ -109,9 +167,17 @@ export default function CurriculumsPage() {
           sortBy={sortBy}
           sortOrder={sortOrder}
           onSort={handleSort}
-          onPageChange={setPage}
+          onPageChange={handlePageChange}
         />
       )}
     </div>
+  );
+}
+
+export default function CurriculumsPage() {
+  return (
+    <Suspense fallback={<Skeleton className="h-[400px]" />}>
+      <CurriculumsContent />
+    </Suspense>
   );
 }

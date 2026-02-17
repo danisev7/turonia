@@ -1,6 +1,4 @@
-"use client";
-
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   Table,
   TableBody,
@@ -118,8 +116,6 @@ export function CandidatesTable({
   onSort,
   onPageChange,
 }: CandidatesTableProps) {
-  const router = useRouter();
-
   return (
     <div className="space-y-4">
       <div className="rounded-md border">
@@ -198,13 +194,17 @@ export function CandidatesTable({
               candidates.map((candidate) => (
                 <TableRow
                   key={candidate.id}
-                  className="cursor-pointer hover:bg-muted/50"
-                  onClick={() => router.push(`/curriculums/${candidate.id}`)}
+                  className="cursor-pointer hover:bg-muted/50 relative"
                 >
                   <TableCell className="font-medium text-sm">
-                    {[candidate.first_name, candidate.last_name]
-                      .filter(Boolean)
-                      .join(" ") || "—"}
+                    <Link
+                      href={`/curriculums/${candidate.id}`}
+                      className="after:absolute after:inset-0"
+                    >
+                      {[candidate.first_name, candidate.last_name]
+                        .filter(Boolean)
+                        .join(" ") || "—"}
+                    </Link>
                   </TableCell>
                   <TableCell className="text-sm">{candidate.email}</TableCell>
                   <TableCell>

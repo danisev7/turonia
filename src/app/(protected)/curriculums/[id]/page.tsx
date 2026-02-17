@@ -119,7 +119,7 @@ export default function CandidateDetailPage({
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => router.push("/curriculums")}
+          onClick={() => router.back()}
         >
           <ArrowLeft className="h-4 w-4" />
         </Button>
