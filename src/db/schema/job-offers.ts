@@ -6,6 +6,7 @@ export const jobOffers = pgTable("job_offers", {
   subject: text("subject"),
   bodyPreview: text("body_preview"),
   sentDate: timestamp("sent_date", { withTimezone: true }).notNull(),
+  bccRecipients: text("bcc_recipients").array(),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

@@ -14,7 +14,7 @@ export const candidateEmails = pgTable(
     candidateId: uuid("candidate_id")
       .notNull()
       .references(() => candidates.id, { onDelete: "cascade" }),
-    gmailMessageId: text("gmail_message_id").notNull().unique(),
+    gmailMessageId: text("gmail_message_id").notNull(),
     gmailThreadId: text("gmail_thread_id"),
     direction: text("direction").notNull(),
     subject: text("subject"),

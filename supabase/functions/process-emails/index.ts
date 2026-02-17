@@ -103,16 +103,30 @@ function extractAttachments(payload: any, result: Attachment[]) {
 }
 
 // ── AI Classification ──────────────────────────────────────────────────
-const CLASSIFICATION_PROMPT = `Ets un assistent que classifica emails rebuts per una escola (Escola el Turó).
-Classifica cada email en: "cv" (currículum amb adjunt PDF/DOCX), "job_offer" (oferta enviada des de l'escola), "response" (resposta d'un candidat), o "other".
-Respon en JSON: {"classification":"cv"|"job_offer"|"response"|"other","confidence":0-1,"reasoning":"..."}`;
+const CLASSIFICATION_PROMPT = `Ets un assistent que classifica emails del compte de correu a8021193@xtec.cat de l'Escola el Turó.
+Cada email inclou la DIRECCIÓ (REBUT o ENVIAT) i el nombre de destinataris BCC/CCO.
+
+Els currículums poden arribar per 3 vies:
+1. FORMULARI WEB: remitent email@escolaelturo.cat, assumpte comença per "Escola El Turó - Curriculum". Sempre són CVs.
+2. DIRECTE DEL CANDIDAT: una persona envia el seu CV per correu (pot tenir qualsevol assumpte).
+3. REENVIO INTERN: un altre correu de l'escola (direcció@escolaelturo.cat, secretaria, etc.) reenvia un CV que li ha arribat per error.
+
+Classifica cada email en:
+- "cv": qualsevol de les 3 vies anteriors (REBUT). Indicadors: adjunt PDF/DOCX, assumpte amb "curriculum"/"CV"/"candidatura", cos amb dades personals o motivació laboral.
+- "job_offer": email ENVIAT des de l'escola que ofereix una posició a MÚLTIPLES candidats simultàniament (via BCC/CCO). Indicadors: text genèric sense nom propi del destinatari, demana disponibilitat, parla de cobrir una plaça/substitució, BCC >= 2. Una resposta individual de l'escola a un sol candidat (Re:...) NO és job_offer.
+- "response": resposta d'un candidat a un email previ (REBUT, sense CV adjunt, dins un fil de conversa existent).
+- "other": qualsevol altre, inclòs respostes individuals de l'escola a un candidat concret (Re:...), convocatòries d'entrevista, confirmacions, seguiment de processos, notificacions, newsletters, administratiu.
+
+Respon NOMÉS en JSON: {"classification":"cv"|"job_offer"|"response"|"other","confidence":0-1,"reasoning":"..."}`;
 
 async function classifyEmail(
   apiKey: string,
   modelId: string,
-  email: { subject: string; body: string; from: string; to: string[]; hasAttachments: boolean; attachmentNames: string[] }
+  email: { subject: string; body: string; from: string; to: string[]; bcc: string[]; hasAttachments: boolean; attachmentNames: string[]; isSent: boolean }
 ): Promise<{ classification: string; confidence: number; reasoning: string }> {
-  const userMsg = `Assumpte: ${email.subject}\nDe: ${email.from}\nA: ${email.to.join(", ")}\nAdjunts: ${email.hasAttachments ? email.attachmentNames.join(", ") || "Sí" : "No"}\n\nCos:\n${email.body.substring(0, 2000)}`;
+  const direction = email.isSent ? "ENVIAT" : "REBUT";
+  const bccInfo = email.bcc.length > 0 ? `BCC/CCO: ${email.bcc.length} destinataris` : "BCC/CCO: 0";
+  const userMsg = `Direcció: ${direction}\nAssumpte: ${email.subject}\nDe: ${email.from}\nA: ${email.to.join(", ")}\n${bccInfo}\nAdjunts: ${email.hasAttachments ? email.attachmentNames.join(", ") || "Sí" : "No"}\n\nCos:\n${email.body.substring(0, 2000)}`;
 
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
@@ -129,8 +143,34 @@ async function classifyEmail(
 
 // ── AI Extraction ──────────────────────────────────────────────────────
 const EXTRACTION_PROMPT = `Ets un expert en extracció de dades de CVs per a l'Escola el Turó.
-Etapes: "infantil","primaria","secundaria","altres". Nivells idiomes: "nadiu","alt","mitja","basic".
-Respon en JSON: {"firstName":null|str,"lastName":null|str,"email":"...","phone":null|str,"dateOfBirth":null|"YYYY-MM-DD","dateOfBirthApproximate":bool,"educationLevel":null|str,"workExperienceSummary":null|str,"teachingMonths":null|num,"stages":[],"languages":[{"language":"...","level":"..."}]}`;
+
+REGLES D'ETAPA (MOLT IMPORTANT):
+Determina l'etapa EXCLUSIVAMENT per la FORMACIÓ ACADÈMICA REGLADA del candidat. NO et fiïs de la descripció personal ni experiència laboral.
+- Grau/Diplomatura/Llicenciatura de Mestre d'Educació INFANTIL → etapa: ["infantil"]
+- Grau/Diplomatura/Llicenciatura de Mestre d'Educació PRIMÀRIA → etapa: ["primaria"]
+- Grau/Diplomatura/Llicenciatura de Mestre d'Educació Infantil I Primària (doble) → etapa: ["infantil","primaria"]
+- Màster en Formació del Professorat (de Secundària) → etapa: ["secundaria"]
+- CFGS (Cicle Formatiu de Grau Superior) d'Educació Infantil (NO és universitari) → etapa: ["altres"]
+- Si té un CFGS i també un Grau/Diplomatura/Llicenciatura, la carrera universitària té prioritat.
+- Si no encaixa en cap dels anteriors → etapa: ["altres"]
+
+ESPECIALITAT (només per secundària):
+Si l'etapa és "secundaria", extreu l'especialitat del Màster o de la formació. Especialitats comunes: Història, Filosofia, Educació Física, Humanitats, Biologia, Àmbit Científic, Ciències Socials, Tecnologia, Llengua i Literatura, Anglès, Matemàtiques.
+
+MESOS D'EXPERIÈNCIA DOCENT (teachingMonths):
+Compta NOMÉS els mesos treballant com a MESTRE/PROFESSOR/A en un col·legi, escola o institut (educació reglada).
+NO comptis: pràctiques, monitoratge, esplais, extraescolars, menjadors, ludoteques, casals, activitats de lleure ni altres treballs no vinculats a docència reglada.
+Si el candidat ha treballat en 2 centres en paral·lel durant el mateix període, els mesos solapats compten UNA SOLA vegada. Calcula la unió dels períodes, no la suma.
+Exemple: Centre A (set 2020 - jun 2023) + Centre B (set 2021 - jun 2022) = 34 mesos (set 2020 a jun 2023), NO 45.
+Si no hi ha experiència docent reglada, teachingMonths = 0.
+
+DATA DE NAIXEMENT:
+- Si el CV indica la data de naixement, utilitza-la (dateOfBirthApproximate: false).
+- Si NO la indica, infereix-la a partir de l'any de finalització de la primera carrera universitària o formació reglada, assumint que es finalitza als 22 anys. Exemple: si va acabar el Grau el 2020, data de naixement estimada = 1998-01-01 (dateOfBirthApproximate: true).
+- Si no hi ha cap dada per inferir-la, deixa dateOfBirth a null.
+
+Nivells idiomes: "nadiu","alt","mitja","basic".
+Respon en JSON: {"firstName":null|str,"lastName":null|str,"email":"...","phone":null|str,"dateOfBirth":null|"YYYY-MM-DD","dateOfBirthApproximate":bool,"educationLevel":null|str,"workExperienceSummary":null|str,"teachingMonths":null|num,"stages":[],"specialty":null|str,"languages":[{"language":"...","level":"..."}]}`;
 
 async function extractCandidate(
   apiKey: string,
@@ -184,6 +224,21 @@ async function ensureAndGetLabelIds(creds: GmailCreds): Promise<Map<string, stri
   return labelMap;
 }
 
+// ── Language Normalization ────────────────────────────────────────────
+const LANGUAGE_ALIASES: Record<string, string> = {
+  "anglès": "Anglès", "angles": "Anglès", "anglés": "Anglès", "inglés": "Anglès", "ingles": "Anglès", "english": "Anglès", "anglais": "Anglès",
+  "castellà": "Castellà", "castella": "Castellà", "castellano": "Castellà", "español": "Castellà", "espanol": "Castellà", "espanyol": "Castellà", "spanish": "Castellà",
+  "català": "Català", "catala": "Català", "catalán": "Català", "catalan": "Català",
+  "francès": "Francès", "frances": "Francès", "francés": "Francès", "frances": "Francès", "french": "Francès", "français": "Francès",
+};
+
+function normalizeLanguage(raw: string): string {
+  const key = raw.trim().toLowerCase();
+  if (LANGUAGE_ALIASES[key]) return LANGUAGE_ALIASES[key];
+  // Capitalize first letter for unknown languages
+  return raw.trim().charAt(0).toUpperCase() + raw.trim().slice(1).toLowerCase();
+}
+
 // ── Main Processing Pipeline ──────────────────────────────────────────
 
 async function processCV(
@@ -217,7 +272,11 @@ async function processCV(
   const extracted = await extractCandidate(extractApiKey, extractModelId, docBase64, mediaType, { subject, body });
   const durationMs = Date.now() - startTime;
 
-  const candidateEmail = extracted.email || fromEmail;
+  // Email always comes from CV extraction, never from the sender
+  const candidateEmail = extracted.email;
+  if (!candidateEmail) {
+    throw new Error(`No candidate email found in CV document (sender: ${fromEmail})`);
+  }
 
   // Upsert candidate
   const { data: existing } = await supabase.from("candidates").select("id").eq("email", candidateEmail).single();
@@ -234,6 +293,7 @@ async function processCV(
       education_level: extracted.educationLevel,
       work_experience_summary: extracted.workExperienceSummary,
       teaching_months: extracted.teachingMonths,
+      specialty: extracted.specialty || null,
       reception_date: new Date(emailDate || Date.now()).toISOString(),
     }).eq("id", candidateId);
 
@@ -253,6 +313,7 @@ async function processCV(
       education_level: extracted.educationLevel,
       work_experience_summary: extracted.workExperienceSummary,
       teaching_months: extracted.teachingMonths,
+      specialty: extracted.specialty || null,
       reception_date: new Date(emailDate || Date.now()).toISOString(),
     }).select("id").single();
     candidateId = newCandidate!.id;
@@ -265,19 +326,26 @@ async function processCV(
     );
   }
 
-  // Insert languages
+  // Insert languages (normalized and deduplicated)
   if (extracted.languages?.length > 0) {
-    await supabase.from("candidate_languages").insert(
-      extracted.languages.map((l: { language: string; level: string | null }) => ({
-        candidate_id: candidateId,
-        language: l.language,
-        level: l.level,
-      }))
-    );
+    const seen = new Set<string>();
+    const uniqueLangs: { candidate_id: string; language: string; level: string | null }[] = [];
+    for (const l of extracted.languages) {
+      const normalized = normalizeLanguage(l.language);
+      if (!seen.has(normalized)) {
+        seen.add(normalized);
+        uniqueLangs.push({ candidate_id: candidateId, language: normalized, level: l.level });
+      }
+    }
+    await supabase.from("candidate_languages").insert(uniqueLangs);
   }
 
-  // Upload document to storage
-  const storagePath = `${candidateId}/${Date.now()}_${attachment.filename}`;
+  // Upload document to storage - sanitize filename to avoid encoding issues
+  const safeFilename = attachment.filename
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")  // remove accents
+    .replace(/[^a-zA-Z0-9._-]/g, "_")                  // replace non-ASCII/special chars
+    .replace(/_+/g, "_");                                // collapse multiple underscores
+  const storagePath = `${candidateId}/${Date.now()}_${safeFilename}`;
   const binaryStr = atob(docBase64);
   const bytes = new Uint8Array(binaryStr.length);
   for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i);
@@ -342,13 +410,16 @@ async function processJobOffer(
 ) {
   const subject = getHeader(headers, "Subject");
   const emailDate = getHeader(headers, "Date");
+  const contactDate = new Date(emailDate || Date.now()).toISOString();
+  const fromEmail = parseAddresses(getHeader(headers, "From"))[0];
 
-  // Create job offer
+  // Create job offer (with all BCC recipients, matched or not)
   const { data: offer } = await supabase.from("job_offers").insert({
     gmail_message_id: msg.id,
     subject,
     body_preview: body.substring(0, 500),
-    sent_date: new Date(emailDate || Date.now()).toISOString(),
+    sent_date: contactDate,
+    bcc_recipients: bccAddresses.length > 0 ? bccAddresses : null,
   }).select("id").single();
 
   if (!offer) return;
@@ -365,10 +436,21 @@ async function processJobOffer(
         candidates.map((c) => ({ job_offer_id: offer.id, candidate_id: c.id }))
       );
 
-      // Update last_contact_date for these candidates
-      const now = new Date().toISOString();
+      // Create candidate_emails (outbound) + update last_contact_date
       for (const c of candidates) {
-        await supabase.from("candidates").update({ last_contact_date: now }).eq("id", c.id);
+        await supabase.from("candidate_emails").insert({
+          candidate_id: c.id,
+          gmail_message_id: msg.id,
+          gmail_thread_id: msg.threadId,
+          direction: "outbound",
+          subject,
+          body_preview: body.substring(0, 500),
+          from_email: fromEmail,
+          to_emails: [c.email],
+          email_date: contactDate,
+        });
+
+        await supabase.from("candidates").update({ last_contact_date: contactDate }).eq("id", c.id);
       }
     }
   }
@@ -422,6 +504,19 @@ Deno.serve(async (req: Request) => {
   const results = { processed: 0, classified: { cv: 0, job_offer: 0, response: 0, other: 0 }, errors: 0, details: [] as string[] };
 
   try {
+    // Parse optional parameters from request body
+    let after = "";
+    let before = "";
+    let maxResults = 10000;
+    let overrideGmailCreds: GmailCreds | null = null;
+    try {
+      const body = await req.json();
+      if (body.after) after = body.after;     // e.g. "2025/02/01"
+      if (body.before) before = body.before;  // e.g. "2025/02/15"
+      if (body.maxResults) maxResults = body.maxResults;
+      if (body.gmailCredentials) overrideGmailCreds = body.gmailCredentials;
+    } catch { /* no body or invalid JSON — use defaults */ }
+
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
@@ -431,9 +526,24 @@ Deno.serve(async (req: Request) => {
     const { data: gmailConfig } = await supabase.from("gmail_config").select("*").eq("is_active", true).single();
     if (!gmailConfig) throw new Error("No active Gmail config");
 
-    const gmailCredsRaw = Deno.env.get(gmailConfig.credentials_env_var);
-    if (!gmailCredsRaw) throw new Error(`Missing env: ${gmailConfig.credentials_env_var}`);
-    const creds: GmailCreds = JSON.parse(gmailCredsRaw);
+    // Build Gmail date filter — if no explicit 'after', use last_sync_at (with 1 day margin)
+    if (!after && gmailConfig.last_sync_at) {
+      const lastSync = new Date(gmailConfig.last_sync_at);
+      lastSync.setDate(lastSync.getDate() - 1); // 1 day margin to avoid missing emails
+      after = `${lastSync.getFullYear()}/${String(lastSync.getMonth() + 1).padStart(2, "0")}/${String(lastSync.getDate()).padStart(2, "0")}`;
+    }
+    let dateFilter = "";
+    if (after) dateFilter += ` after:${after}`;
+    if (before) dateFilter += ` before:${before}`;
+
+    let creds: GmailCreds;
+    if (overrideGmailCreds) {
+      creds = overrideGmailCreds;
+    } else {
+      const gmailCredsRaw = Deno.env.get(gmailConfig.credentials_env_var);
+      if (!gmailCredsRaw) throw new Error(`Missing env: ${gmailConfig.credentials_env_var}`);
+      creds = JSON.parse(gmailCredsRaw);
+    }
 
     const { data: classConfig } = await supabase.from("ai_model_config").select("*").eq("task_type", "classification").eq("is_active", true).single();
     const { data: extractConfig } = await supabase.from("ai_model_config").select("*").eq("task_type", "extraction").eq("is_active", true).single();
@@ -446,11 +556,10 @@ Deno.serve(async (req: Request) => {
     // Get Gmail label map
     const labelMap = await ensureAndGetLabelIds(creds);
 
-    // Fetch unprocessed emails from inbox
-    const inboxIds = await listUnprocessedMessages(supabase, creds, "in:inbox", 50);
-    // Also fetch from Sent for job offers
-    const sentIds = await listUnprocessedMessages(supabase, creds, "in:sent", 50);
-    const allIds = [...new Set([...inboxIds, ...sentIds])];
+    // Fetch unprocessed emails: all received (excluding trash/spam) + sent
+    const receivedIds = await listUnprocessedMessages(supabase, creds, `-in:trash -in:spam -in:sent${dateFilter}`, maxResults);
+    const sentIds = await listUnprocessedMessages(supabase, creds, `in:sent${dateFilter}`, maxResults);
+    const allIds = [...new Set([...receivedIds, ...sentIds])];
 
     for (const messageId of allIds) {
       try {
@@ -471,22 +580,25 @@ Deno.serve(async (req: Request) => {
           body,
           from,
           to,
+          bcc,
           hasAttachments: attachments.length > 0,
           attachmentNames: attachments.map((a) => a.filename),
+          isSent,
         });
 
         // Record processed email
-        const { data: processedEmail } = await supabase.from("processed_emails").insert({
+        const { data: processedEmail, error: peError } = await supabase.from("processed_emails").insert({
           gmail_message_id: messageId,
           gmail_thread_id: msg.threadId,
           classification: classification.classification,
           processing_status: "completed",
         }).select("id").single();
+        if (peError) throw new Error(`Insert processed_email failed: ${peError.message}`);
 
         // Process based on classification
         switch (classification.classification) {
           case "cv":
-            await processCV(supabase, creds, extractApiKey, extractConfig.model_id, msg, headers, body, attachments, processedEmail!.id, labelMap);
+            await processCV(supabase, creds, extractApiKey, extractConfig.model_id, msg, headers, body, attachments, processedEmail.id, labelMap);
             results.classified.cv++;
             break;
           case "job_offer":
@@ -509,12 +621,12 @@ Deno.serve(async (req: Request) => {
         const errMsg = error instanceof Error ? error.message : "Unknown";
         results.details.push(`Error processing ${messageId}: ${errMsg}`);
 
-        // Record failed processing
+        // Record failed processing (ignore errors)
         await supabase.from("processed_emails").insert({
           gmail_message_id: messageId,
           processing_status: "failed",
-          error_message: errMsg,
-        }).catch(() => {});
+          error_message: errMsg.substring(0, 500),
+        });
       }
     }
 
@@ -539,18 +651,35 @@ async function listUnprocessedMessages(
   query: string,
   maxResults: number
 ): Promise<string[]> {
-  const params = new URLSearchParams({ q: query, maxResults: maxResults.toString() });
-  const data = await gmailRequest(creds, `/messages?${params}`);
-  const allIds = (data.messages || []).map((m: { id: string }) => m.id);
+  const allIds: string[] = [];
+  let pageToken: string | undefined;
+
+  // Gmail API returns max 100 per page, paginate to reach maxResults
+  while (allIds.length < maxResults) {
+    const pageSize = Math.min(100, maxResults - allIds.length);
+    const params = new URLSearchParams({ q: query, maxResults: pageSize.toString() });
+    if (pageToken) params.set("pageToken", pageToken);
+
+    const data = await gmailRequest(creds, `/messages?${params}`);
+    const ids = (data.messages || []).map((m: { id: string }) => m.id);
+    allIds.push(...ids);
+
+    pageToken = data.nextPageToken;
+    if (!pageToken || ids.length === 0) break;
+  }
 
   if (allIds.length === 0) return [];
 
-  // Filter out already processed
-  const { data: processed } = await supabase
-    .from("processed_emails")
-    .select("gmail_message_id")
-    .in("gmail_message_id", allIds);
+  // Filter out already processed (batch in chunks of 100 for .in() limit)
+  const processedSet = new Set<string>();
+  for (let i = 0; i < allIds.length; i += 100) {
+    const chunk = allIds.slice(i, i + 100);
+    const { data: processed } = await supabase
+      .from("processed_emails")
+      .select("gmail_message_id")
+      .in("gmail_message_id", chunk);
+    processed?.forEach((p) => processedSet.add(p.gmail_message_id));
+  }
 
-  const processedSet = new Set(processed?.map((p) => p.gmail_message_id) || []);
   return allIds.filter((id: string) => !processedSet.has(id));
 }
