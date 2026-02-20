@@ -28,6 +28,8 @@ function CurriculumsContent() {
       status: searchParams.get("status") || "",
       evaluations:
         searchParams.get("evaluations")?.split(",").filter(Boolean) || [],
+      specialties:
+        searchParams.get("specialties")?.split(",").filter(Boolean) || [],
       languages:
         searchParams.get("languages")?.split(",").filter(Boolean) || [],
       dateFrom: searchParams.get("dateFrom") || "",
@@ -46,6 +48,7 @@ function CurriculumsContent() {
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
   const [availableLanguages, setAvailableLanguages] = useState<string[]>([]);
+  const [availableSpecialties, setAvailableSpecialties] = useState<string[]>([]);
 
   // Helper to update URL search params via router.replace
   const updateParams = useCallback(
@@ -76,6 +79,10 @@ function CurriculumsContent() {
         evaluations:
           newFilters.evaluations.length > 0
             ? newFilters.evaluations.join(",")
+            : undefined,
+        specialties:
+          newFilters.specialties.length > 0
+            ? newFilters.specialties.join(",")
             : undefined,
         languages:
           newFilters.languages.length > 0
@@ -115,6 +122,8 @@ function CurriculumsContent() {
       params.set("stages", filters.stages.join(","));
     if (filters.evaluations.length > 0)
       params.set("evaluations", filters.evaluations.join(","));
+    if (filters.specialties.length > 0)
+      params.set("specialties", filters.specialties.join(","));
     if (filters.languages.length > 0)
       params.set("languages", filters.languages.join(","));
     if (filters.dateFrom) params.set("dateFrom", filters.dateFrom);
@@ -136,6 +145,13 @@ function CurriculumsContent() {
     );
     setAvailableLanguages(Array.from(langs).sort());
 
+    // Extract available specialties
+    const specs = new Set<string>();
+    json.data?.forEach((c: { specialty?: string | null }) => {
+      if (c.specialty) specs.add(c.specialty);
+    });
+    setAvailableSpecialties(Array.from(specs).sort());
+
     setLoading(false);
   }, [filters, page, sortBy, sortOrder]);
 
@@ -153,6 +169,7 @@ function CurriculumsContent() {
       <CandidatesFilters
         filters={filters}
         availableLanguages={availableLanguages}
+        availableSpecialties={availableSpecialties}
         onFiltersChange={handleFiltersChange}
       />
 

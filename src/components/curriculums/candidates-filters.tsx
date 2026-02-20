@@ -29,6 +29,7 @@ export interface Filters {
   stages: string[];
   status: string;
   evaluations: string[];
+  specialties: string[];
   languages: string[];
   dateFrom: string;
   dateTo: string;
@@ -37,6 +38,7 @@ export interface Filters {
 interface CandidatesFiltersProps {
   filters: Filters;
   availableLanguages: string[];
+  availableSpecialties: string[];
   onFiltersChange: (filters: Filters) => void;
 }
 
@@ -44,6 +46,7 @@ const GROUP_COLORS: Record<string, { active: string; dot: string }> = {
   Etapa: { active: "bg-teal-600 text-white hover:bg-teal-700", dot: "bg-teal-500" },
   Estat: { active: "bg-sky-600 text-white hover:bg-sky-700", dot: "bg-sky-500" },
   Avaluació: { active: "bg-amber-500 text-white hover:bg-amber-600", dot: "bg-amber-500" },
+  Especialitat: { active: "bg-rose-600 text-white hover:bg-rose-700", dot: "bg-rose-500" },
   Idiomes: { active: "bg-violet-600 text-white hover:bg-violet-700", dot: "bg-violet-500" },
 };
 
@@ -84,10 +87,11 @@ function ToggleGroup({
 export function CandidatesFilters({
   filters,
   availableLanguages,
+  availableSpecialties,
   onFiltersChange,
 }: CandidatesFiltersProps) {
   const toggleArrayFilter = (
-    key: "stages" | "evaluations" | "languages",
+    key: "stages" | "evaluations" | "specialties" | "languages",
     value: string
   ) => {
     const current = filters[key];
@@ -102,6 +106,7 @@ export function CandidatesFilters({
     filters.stages.length > 0 ||
     filters.status ||
     filters.evaluations.length > 0 ||
+    filters.specialties.length > 0 ||
     filters.languages.length > 0 ||
     filters.dateFrom ||
     filters.dateTo;
@@ -152,6 +157,7 @@ export function CandidatesFilters({
                 stages: [],
                 status: "",
                 evaluations: [],
+                specialties: [],
                 languages: [],
                 dateFrom: "",
                 dateTo: "",
@@ -205,6 +211,15 @@ export function CandidatesFilters({
           selected={filters.evaluations}
           onToggle={(v) => toggleArrayFilter("evaluations", v)}
         />
+
+        {availableSpecialties.length > 0 && (
+          <ToggleGroup
+            label="Especialitat"
+            options={availableSpecialties.map((s) => ({ value: s, label: s }))}
+            selected={filters.specialties}
+            onToggle={(v) => toggleArrayFilter("specialties", v)}
+          />
+        )}
 
         {availableLanguages.length > 0 && (
           <ToggleGroup

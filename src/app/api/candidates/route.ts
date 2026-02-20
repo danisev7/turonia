@@ -18,6 +18,7 @@ export async function GET(request: NextRequest) {
   const status = searchParams.get("status") || "";
   const stages = searchParams.get("stages") || "";
   const evaluations = searchParams.get("evaluations") || "";
+  const specialties = searchParams.get("specialties") || "";
   const languages = searchParams.get("languages") || "";
   const dateFrom = searchParams.get("dateFrom") || "";
   const dateTo = searchParams.get("dateTo") || "";
@@ -50,6 +51,11 @@ export async function GET(request: NextRequest) {
   if (evaluations) {
     const evalArray = evaluations.split(",");
     query = query.in("evaluation", evalArray);
+  }
+
+  if (specialties) {
+    const specArray = specialties.split(",");
+    query = query.in("specialty", specArray);
   }
 
   if (dateFrom) {

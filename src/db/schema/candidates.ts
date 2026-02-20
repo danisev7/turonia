@@ -26,6 +26,7 @@ export const candidates = pgTable(
     teachingMonths: integer("teaching_months"),
     status: text("status").notNull().default("pendent"),
     evaluation: text("evaluation"),
+    specialty: text("specialty"),
     observations: text("observations"),
     receptionDate: timestamp("reception_date", { withTimezone: true }).notNull(),
     lastContactDate: timestamp("last_contact_date", { withTimezone: true }),
