@@ -17,7 +17,6 @@ async function handleCronRequest(request: NextRequest) {
   }
 
   try {
-    // Call the Supabase Edge Function
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
@@ -28,37 +27,27 @@ async function handleCronRequest(request: NextRequest) {
       );
     }
 
-    // Forward optional params (after, before, maxResults) from query string
-    const after = request.nextUrl.searchParams.get("after") || undefined;
-    const before = request.nextUrl.searchParams.get("before") || undefined;
-    const maxResults = request.nextUrl.searchParams.get("maxResults") || undefined;
+    // Read Clickedu credentials from env
+    const username = process.env.CLICKEDU_USERNAME;
+    const password = process.env.CLICKEDU_PASSWORD;
+    const passfileContent = process.env.CLICKEDU_PASSFILE;
 
-    const bodyPayload: Record<string, unknown> = {};
-    if (after) bodyPayload.after = after;
-    if (before) bodyPayload.before = before;
-    if (maxResults) bodyPayload.maxResults = parseInt(maxResults);
-
-    // Pass Gmail credentials from Vercel env to Edge Function
-    const gmailClientId = process.env.CLIENT_ID_OAUTH;
-    const gmailClientSecret = process.env.CLIENT_SECRET_OAUTH;
-    const gmailRefreshToken = process.env.REFRESH_TOKEN_OAUTH;
-    if (gmailClientId && gmailClientSecret && gmailRefreshToken) {
-      bodyPayload.gmailCredentials = {
-        client_id: gmailClientId,
-        client_secret: gmailClientSecret,
-        refresh_token: gmailRefreshToken,
-      };
+    if (!username || !password || !passfileContent) {
+      return NextResponse.json(
+        { error: "Missing Clickedu credentials (CLICKEDU_USERNAME, CLICKEDU_PASSWORD, CLICKEDU_PASSFILE)" },
+        { status: 500 }
+      );
     }
 
     const response = await fetch(
-      `${supabaseUrl}/functions/v1/process-emails`,
+      `${supabaseUrl}/functions/v1/sync-clickedu-students`,
       {
         method: "POST",
         headers: {
           Authorization: `Bearer ${serviceRoleKey}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(bodyPayload),
+        body: JSON.stringify({ username, password, passfileContent }),
       }
     );
 
@@ -76,7 +65,7 @@ export async function GET(request: NextRequest) {
   return handleCronRequest(request);
 }
 
-// POST: Alternative for manual triggers or pg_cron via pg_net
+// POST: Alternative for manual triggers
 export async function POST(request: NextRequest) {
   return handleCronRequest(request);
 }
