@@ -116,12 +116,17 @@ async function clickeduLogin(
 
   cookies = mergeCookies(cookies, extractCookies(step2Res));
 
-  // Verify login success: should redirect to /sumari/
+  // Verify login success: Clickedu may respond with either:
+  // - HTTP 302 redirect to /sumari/ (Location header)
+  // - HTTP 200 with JS redirect: window.location.href='./sumari/index.php'
   const location = step2Res.headers.get("location") || "";
-  if (!location.includes("sumari")) {
-    const body = await step2Res.text();
+  const step2Body = await step2Res.text();
+  const isHttpRedirect = location.includes("sumari");
+  const isJsRedirect = step2Body.includes("sumari");
+
+  if (!isHttpRedirect && !isJsRedirect) {
     throw new Error(
-      `LOGIN_STEP2_FAILED: Expected redirect to /sumari/, got location="${location}", status=${step2Res.status}. Body preview: ${body.substring(0, 200)}`
+      `LOGIN_STEP2_FAILED: Expected redirect to /sumari/, got location="${location}", status=${step2Res.status}. Body preview: ${step2Body.substring(0, 200)}`
     );
   }
 
@@ -131,10 +136,20 @@ async function clickeduLogin(
 // ── Fetch and Parse Student List ────────────────────────────────────
 
 async function fetchStudentList(cookies: string[]): Promise<Student[]> {
+  // Must POST with lletra_usuari=TOTS to get all students (default is letter "A")
   const res = await fetch(
     `${BASE_URL}/admin/users.php?tipus=alu&selected=alu`,
     {
-      headers: { Cookie: cookieHeader(cookies) },
+      method: "POST",
+      headers: {
+        Cookie: cookieHeader(cookies),
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: new URLSearchParams({
+        lletra_usuari: "TOTS",
+        cerca_usuari: "",
+        classe: "",
+      }),
       redirect: "manual",
     }
   );
@@ -145,7 +160,9 @@ async function fetchStudentList(cookies: string[]): Promise<Student[]> {
     );
   }
 
-  const html = await res.text();
+  // Clickedu uses ISO-8859-15 encoding — decode properly for accented characters
+  const rawBytes = await res.arrayBuffer();
+  const html = new TextDecoder("iso-8859-15").decode(rawBytes);
   const doc = new DOMParser().parseFromString(html, "text/html");
   if (!doc) throw new Error("PARSE_FAILED: Could not parse student list HTML");
 
@@ -170,7 +187,9 @@ async function fetchStudentList(cookies: string[]): Promise<Student[]> {
 
     if (isNaN(clickeduId) || !firstName || !lastName) continue;
 
-    const classId = CLASS_NAME_TO_ID[className] || 0;
+    // Strip suffixes like "(repetidor)" for class matching
+    const baseClassName = className.replace(/\s*\(.*\)$/, "").trim();
+    const classId = CLASS_NAME_TO_ID[baseClassName] || CLASS_NAME_TO_ID[className] || 0;
 
     students.push({
       clickedu_id: clickeduId,
