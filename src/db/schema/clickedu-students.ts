@@ -14,6 +14,7 @@ export const clickeduStudents = pgTable("clickedu_students", {
   lastName: text("last_name").notNull(),
   classId: integer("class_id").notNull(),
   className: text("class_name").notNull(),
+  idalu: text("idalu"),
   isRepetidor: boolean("is_repetidor").default(false).notNull(),
   isActive: boolean("is_active").default(true),
   listSyncedAt: timestamp("list_synced_at", { withTimezone: true }),

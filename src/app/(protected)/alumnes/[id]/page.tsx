@@ -30,6 +30,7 @@ interface StudentDetailData {
     class_name: string;
     class_id: number;
     clickedu_id: number;
+    idalu: string | null;
   };
   yearlyData: any;
   neseData: any;

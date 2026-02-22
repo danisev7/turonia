@@ -223,20 +223,13 @@ export const StudentNeseTab = forwardRef<EditableTabRef, StudentNeseTabProps>(
 
           {/* Tutor section */}
           <Section title="Seguiment tutoria" badge="Tutor/a" color="bg-green-100 text-green-800">
-            {/* Short fields row: CAD %, CAD data venciment, Curs retenció */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-              <FieldInput
-                label="CAD %"
-                value={form.cad_percentatge || ""}
-                editing={isFieldEditable("cad_percentatge")}
-                onChange={(v) => setForm({ ...form, cad_percentatge: v || null })}
-              />
-              <FieldInput
-                label="CAD data venciment"
-                value={form.cad_data_venciment || ""}
-                editing={isFieldEditable("cad_data_venciment")}
-                type="date"
-                onChange={(v) => setForm({ ...form, cad_data_venciment: v || null })}
+            {/* Short fields row: CAD + Curs retenció */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <FieldText
+                label="CAD"
+                value={form.cad || ""}
+                editing={isFieldEditable("cad")}
+                onChange={(v) => setForm({ ...form, cad: v || null })}
               />
               <div className="flex flex-col gap-1.5">
                 <label className="text-sm font-medium text-muted-foreground">

@@ -268,7 +268,7 @@ export async function GET(
   doc.setFont("helvetica", "normal");
   doc.setTextColor(107, 114, 128);
   doc.text(
-    `${student.class_name} \u00b7 ${etapaLabel} \u00b7 Curs ${yearData?.name || "-"}`,
+    `${student.class_name} \u00b7 ${etapaLabel}${student.idalu ? ` \u00b7 IDALU ${student.idalu}` : ""} \u00b7 Curs ${yearData?.name || "-"}`,
     pdf.M + pdf.CW,
     pdf.y + 10,
     { align: "right" }
@@ -366,13 +366,9 @@ export async function GET(
     // ── Seguiment tutoria ──
     pdf.subHeader("Seguiment tutoria");
     pdf.inlineRow([
-      { label: "CAD %", value: neseData.cad_percentatge || "-" },
-      {
-        label: "CAD data venciment",
-        value: neseData.cad_data_venciment || "-",
-      },
       { label: "Curs retenci\u00f3", value: neseData.curs_retencio || "-" },
     ]);
+    pdf.textField("CAD", neseData.cad);
 
     pdf.textField("Informe diagn\u00f2stic", neseData.informe_diagnostic);
     pdf.textField("Mat\u00e8ries PI", neseData.materies_pi);
