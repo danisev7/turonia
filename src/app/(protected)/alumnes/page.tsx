@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, Suspense } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { StudentsFilters } from "@/components/alumnes/students-filters";
 import { StudentsTable } from "@/components/alumnes/students-table";
@@ -43,6 +43,15 @@ function StudentsPageContent() {
   const [availableClasses, setAvailableClasses] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Local search input with debounce
+  const [searchInput, setSearchInput] = useState(filters.search);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Sync searchInput when URL search param changes externally (e.g. clear filters)
+  useEffect(() => {
+    setSearchInput(filters.search);
+  }, [filters.search]);
+
   // Update URL params
   const updateParams = useCallback(
     (updates: Record<string, string>) => {
@@ -59,8 +68,15 @@ function StudentsPageContent() {
     [router, searchParams]
   );
 
-  // Fetch students
+  // Fetch students with AbortController to cancel stale requests
+  const abortRef = useRef<AbortController | null>(null);
+
   useEffect(() => {
+    // Cancel previous request
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
     const fetchStudents = async () => {
       setLoading(true);
       const params = new URLSearchParams();
@@ -75,7 +91,9 @@ function StudentsPageContent() {
       if (filters.estat) params.set("estat", filters.estat);
 
       try {
-        const res = await fetch(`/api/students?${params.toString()}`);
+        const res = await fetch(`/api/students?${params.toString()}`, {
+          signal: controller.signal,
+        });
         const json = await res.json();
 
         if (res.ok) {
@@ -83,28 +101,67 @@ function StudentsPageContent() {
           setTotal(json.total || 0);
           setAvailableClasses(json.availableClasses || []);
         }
-      } catch (err) {
+      } catch (err: any) {
+        if (err.name === "AbortError") return; // Ignored — cancelled by newer request
         console.error("Error fetching students:", err);
       } finally {
-        setLoading(false);
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
       }
     };
 
     fetchStudents();
+
+    return () => controller.abort();
   }, [sortBy, sortOrder, filters]);
 
   // Handlers
   const handleFiltersChange = useCallback(
     (newFilters: Filters) => {
-      updateParams({
-        search: newFilters.search,
-        etapa: newFilters.etapa.join(","),
-        className: newFilters.className.join(","),
-        graellaNese: newFilters.graellaNese,
-        estat: newFilters.estat,
-      });
+      // Update search input immediately for responsive UI
+      setSearchInput(newFilters.search);
+
+      // Debounce only the search text — other filters update instantly
+      if (newFilters.search !== filters.search) {
+        if (debounceRef.current) clearTimeout(debounceRef.current);
+        debounceRef.current = setTimeout(() => {
+          updateParams({
+            search: newFilters.search,
+            etapa: newFilters.etapa.join(","),
+            className: newFilters.className.join(","),
+            graellaNese: newFilters.graellaNese,
+            estat: newFilters.estat,
+          });
+        }, 350);
+        // If other filters also changed, update those immediately
+        if (
+          newFilters.etapa.join(",") !== filters.etapa.join(",") ||
+          newFilters.className.join(",") !== filters.className.join(",") ||
+          newFilters.graellaNese !== filters.graellaNese ||
+          newFilters.estat !== filters.estat
+        ) {
+          updateParams({
+            search: filters.search, // keep old search for now
+            etapa: newFilters.etapa.join(","),
+            className: newFilters.className.join(","),
+            graellaNese: newFilters.graellaNese,
+            estat: newFilters.estat,
+          });
+        }
+      } else {
+        // Non-search filter change — update immediately
+        if (debounceRef.current) clearTimeout(debounceRef.current);
+        updateParams({
+          search: newFilters.search,
+          etapa: newFilters.etapa.join(","),
+          className: newFilters.className.join(","),
+          graellaNese: newFilters.graellaNese,
+          estat: newFilters.estat,
+        });
+      }
     },
-    [updateParams]
+    [updateParams, filters]
   );
 
   const handleSort = useCallback(
@@ -138,7 +195,7 @@ function StudentsPageContent() {
       </div>
 
       <StudentsFilters
-        filters={filters}
+        filters={{ ...filters, search: searchInput }}
         onFiltersChange={handleFiltersChange}
         availableClasses={availableClasses}
       />
