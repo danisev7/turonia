@@ -6,6 +6,7 @@ import { Sidebar } from "@/components/layout/sidebar";
 import { Header } from "@/components/layout/header";
 import { MobileNav } from "@/components/layout/mobile-nav";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import type { UserRole } from "@/types";
 
 export default function ProtectedLayout({
   children,
@@ -15,12 +16,25 @@ export default function ProtectedLayout({
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [userEmail, setUserEmail] = useState("");
+  const [userRole, setUserRole] = useState<UserRole>("convidat");
 
   useEffect(() => {
     const supabase = createClient();
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (user?.email) {
         setUserEmail(user.email);
+      }
+      if (user?.id) {
+        supabase
+          .from("profiles")
+          .select("role")
+          .eq("auth_id", user.id)
+          .single()
+          .then(({ data }) => {
+            if (data?.role) {
+              setUserRole(data.role as UserRole);
+            }
+          });
       }
     });
   }, []);
@@ -31,10 +45,12 @@ export default function ProtectedLayout({
         <Sidebar
           collapsed={sidebarCollapsed}
           onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
+          userRole={userRole}
         />
         <MobileNav
           open={mobileNavOpen}
           onClose={() => setMobileNavOpen(false)}
+          userRole={userRole}
         />
         <div className="flex flex-1 flex-col overflow-hidden">
           <Header

@@ -10,3 +10,7 @@ export { processedEmails } from "./processed-emails";
 export { extractionLogs } from "./extraction-logs";
 export { aiModelConfig } from "./ai-model-config";
 export { gmailConfig } from "./gmail-config";
+export { clickeduStudents } from "./clickedu-students";
+export { clickeduYears } from "./clickedu-years";
+export { studentYearlyData } from "./student-yearly-data";
+export { studentNeseData } from "./student-nese-data";

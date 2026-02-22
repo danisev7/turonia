@@ -3,7 +3,13 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { LayoutDashboard, FileText, X } from "lucide-react";
+import {
+  LayoutDashboard,
+  FileText,
+  GraduationCap,
+  X,
+  type LucideIcon,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -11,27 +17,24 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import type { UserRole } from "@/types";
+import { getNavItems } from "@/lib/permissions";
 
-const navigation = [
-  {
-    name: "Tauler de Control",
-    href: "/dashboard",
-    icon: LayoutDashboard,
-  },
-  {
-    name: "Gestió de Currículums",
-    href: "/curriculums",
-    icon: FileText,
-  },
-];
+const iconMap: Record<string, LucideIcon> = {
+  LayoutDashboard,
+  FileText,
+  GraduationCap,
+};
 
 interface MobileNavProps {
   open: boolean;
   onClose: () => void;
+  userRole: UserRole;
 }
 
-export function MobileNav({ open, onClose }: MobileNavProps) {
+export function MobileNav({ open, onClose, userRole }: MobileNavProps) {
   const pathname = usePathname();
+  const navigation = getNavItems(userRole);
 
   return (
     <Sheet open={open} onOpenChange={onClose}>
@@ -47,15 +50,29 @@ export function MobileNav({ open, onClose }: MobileNavProps) {
             <X className="h-4 w-4" />
           </Button>
         </SheetHeader>
-        <nav className="space-y-1 p-2">
-          {navigation.map((item) => {
+        <nav className="p-2">
+          {navigation.map((entry) => {
+            if (entry.type === "section") {
+              return (
+                <div
+                  key={entry.name}
+                  className="mt-4 mb-1 mx-1 px-2 py-1 rounded-md bg-muted/50"
+                >
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    {entry.name}
+                  </span>
+                </div>
+              );
+            }
+
             const isActive =
-              pathname === item.href || pathname.startsWith(item.href + "/");
+              pathname === entry.href || pathname.startsWith(entry.href + "/");
+            const Icon = iconMap[entry.iconName] || LayoutDashboard;
 
             return (
               <Link
-                key={item.name}
-                href={item.href}
+                key={entry.name}
+                href={entry.href}
                 onClick={onClose}
                 className={cn(
                   "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
@@ -64,8 +81,8 @@ export function MobileNav({ open, onClose }: MobileNavProps) {
                     : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
                 )}
               >
-                <item.icon className="h-5 w-5" />
-                <span>{item.name}</span>
+                <Icon className="h-5 w-5" />
+                <span>{entry.name}</span>
               </Link>
             );
           })}

@@ -37,7 +37,7 @@ export function KPICards({ total, newLast7Days, pending }: KPICardsProps) {
   return (
     <div className="grid gap-4 md:grid-cols-3">
       {cards.map((card) => (
-        <Card key={card.title} className={card.border}>
+        <Card key={card.title} className={`${card.border} flex flex-col`}>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
               {card.title}
@@ -46,8 +46,8 @@ export function KPICards({ total, newLast7Days, pending }: KPICardsProps) {
               <card.icon className="h-4 w-4" />
             </div>
           </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{card.value}</div>
+          <CardContent className="flex flex-1 items-center justify-center">
+            <div className="text-4xl font-bold">{card.value}</div>
           </CardContent>
         </Card>
       ))}

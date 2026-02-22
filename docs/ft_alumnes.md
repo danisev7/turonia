@@ -360,34 +360,68 @@ Pot ser que alguns alumnes tinguin el nom o cognom mal escrit a l'Excel i no es 
 
 ## 9. Fases d'Implementació
 
-### Fase 1: Infraestructura (DB + permisos)
-1. Crear schema Drizzle per `clickedu_students`
-2. Migracions: `clickedu_years`, `student_yearly_data`, `student_nese_data`
-3. RLS policies per a les noves taules
-4. Crear `src/lib/permissions.ts`
-5. Actualitzar sidebar amb filtratge per rol
-6. Inserir registre `clickedu_years` per al curs 2024-25
+### Fase 1: Infraestructura (DB + permisos) ✅ COMPLETADA
+1. ✅ Crear schema Drizzle per `clickedu_students` → `src/db/schema/clickedu-students.ts`
+2. ✅ Migracions: `clickedu_years`, `student_yearly_data`, `student_nese_data` → aplicades a Supabase
+3. ✅ RLS policies per a les noves taules (select per rols amb accés, insert/update segons permisos)
+4. ✅ Crear `src/lib/permissions.ts` (canView, canEdit, canEditField, getNavItems, getEtapaFromClassId)
+5. ✅ Actualitzar sidebar + mobile-nav amb filtratge per rol (userRole prop des del layout)
+6. ✅ Inserir registre `clickedu_years` per al curs 2024-25 (is_current=true, clickedu_curs_id=35)
 
-### Fase 2: Script importació + dades inicials
-7. Crear script `scripts/import-students-excel.ts`
-8. Importar els 6 Excel del curs 2024-25
-9. Verificar dades importades
+**Fitxers creats/modificats:**
+- `src/db/schema/clickedu-students.ts` (nou)
+- `src/db/schema/clickedu-years.ts` (nou)
+- `src/db/schema/student-yearly-data.ts` (nou)
+- `src/db/schema/student-nese-data.ts` (nou)
+- `src/db/schema/index.ts` (actualitzat exports)
+- `src/types/index.ts` (nous tipus: UserRole, StudentEtapa, etc.)
+- `src/lib/permissions.ts` (nou)
+- `src/components/layout/sidebar.tsx` (userRole + nav dinàmica)
+- `src/components/layout/mobile-nav.tsx` (userRole + nav dinàmica)
+- `src/app/(protected)/layout.tsx` (càrrega rol des de profiles)
 
-### Fase 3: Llistat d'alumnes
-10. API route `/api/students` amb filtres
-11. Pàgina `/alumnes` amb filtres i taula
-12. Components: `students-table.tsx`, `students-filters.tsx`
+### Fase 2: Script importació + dades inicials ✅ COMPLETADA
+7. ✅ Crear script `scripts/import-students-excel.ts` (amb parsing de Traspàs + NESE, fuzzy matching)
+8. ✅ Importar els 6 Excel del curs 2024-25 (186 traspàs matched, 88 NESE matched)
+9. ✅ Verificar dades importades (185 student_yearly_data, 87 student_nese_data)
 
-### Fase 4: Fitxa detall
-13. API route `/api/students/[id]` GET + PATCH
-14. Pàgina `/alumnes/[id]` amb pestanyes
-15. Components: tabs bàsiques, NESE, evolució
-16. Mode edició amb permisos
+**Fitxers creats:**
+- `scripts/import-students-excel.ts` (script complet amb `--all` o `--type/--etapa/--file`)
+- `scripts/output/unmatched_*.csv` (log alumnes no matchejats per revisió manual)
 
-### Fase 5: Exportació + còpia de curs
-17. Exportar llistat a Excel
-18. Exportar fitxa a PDF (amb logo)
-19. Funcionalitat còpia de curs escolar
+### Fase 3: Llistat d'alumnes ✅ COMPLETADA
+10. ✅ API route `/api/students` amb filtres (search, etapa, className, graellaNese, estat, sort, pagination)
+11. ✅ Pàgina `/alumnes` amb filtres i taula (URL-driven state, Suspense wrapper)
+12. ✅ Components: `students-table.tsx`, `students-filters.tsx` (badges amb colors, taula ordenable, paginació)
+
+**Fitxers creats:**
+- `src/app/api/students/route.ts` (GET amb filtres, permisos per rol)
+- `src/app/(protected)/alumnes/page.tsx` (pàgina llistat)
+- `src/components/alumnes/students-filters.tsx` (filtres per etapa, classe, NESE, estat)
+- `src/components/alumnes/students-table.tsx` (taula amb sort, pagination, link a detall)
+
+### Fase 4: Fitxa detall ✅ COMPLETADA
+13. ✅ API route `/api/students/[id]` GET + PATCH (amb permisos per rol i camp)
+14. ✅ Pàgina `/alumnes/[id]` amb 3 pestanyes (Traspàs, NESE, Evolució)
+15. ✅ Components: `student-info-tab.tsx`, `student-nese-tab.tsx`, `student-evolution-tab.tsx`
+16. ✅ Mode edició amb permisos (canEdit/canEditField per rol, seccions Secretaria/POE-MESI/Tutor)
+
+**Fitxers creats:**
+- `src/app/api/students/[id]/route.ts` (GET amb joins, PATCH amb validació permisos)
+- `src/app/(protected)/alumnes/[id]/page.tsx` (pàgina detall amb tabs)
+- `src/components/alumnes/student-info-tab.tsx` (tab traspàs amb edició)
+- `src/components/alumnes/student-nese-tab.tsx` (tab NESE amb seccions per rol)
+- `src/components/alumnes/student-evolution-tab.tsx` (històric per cursos)
+
+### Fase 5: Exportació + còpia de curs ✅ COMPLETADA
+17. ✅ Exportar llistat a Excel (`/api/students/export` amb ExcelJS, botó a la pàgina)
+18. ✅ Exportar fitxa a PDF (`/api/students/[id]/export-pdf` genera HTML imprimible amb print-to-PDF)
+19. ✅ Funcionalitat còpia de curs escolar (`/api/students/copy-year` POST, copia yearly+nese amb reset d'estat)
+
+**Fitxers creats:**
+- `src/app/api/students/export/route.ts` (exportació Excel amb filtres per etapa)
+- `src/app/api/students/[id]/export-pdf/route.ts` (exportació PDF amb HTML imprimible)
+- `src/app/api/students/copy-year/route.ts` (còpia de curs amb reset de camps transitoris)
 
 ---
 
