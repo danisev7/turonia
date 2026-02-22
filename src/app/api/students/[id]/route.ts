@@ -119,7 +119,48 @@ export async function PATCH(
   const body = await request.json();
   const { table, data, schoolYearId } = body;
 
-  if (!table || !data || !schoolYearId) {
+  if (!table || !data) {
+    return NextResponse.json(
+      { error: "Falten dades requerides" },
+      { status: 400 }
+    );
+  }
+
+  // --- Handle clickedu_students updates (e.g. idalu) ---
+  if (table === "clickedu_students") {
+    if (!canEdit(role, "alumnes_nese") && !canEdit(role, "alumnes")) {
+      return NextResponse.json({ error: "No autoritzat" }, { status: 403 });
+    }
+
+    // Only allow specific safe fields
+    const ALLOWED_STUDENT_FIELDS = ["idalu"];
+    const sanitized: Record<string, any> = {};
+    for (const [key, value] of Object.entries(data)) {
+      if (ALLOWED_STUDENT_FIELDS.includes(key)) {
+        sanitized[key] = value;
+      }
+    }
+
+    if (Object.keys(sanitized).length === 0) {
+      return NextResponse.json({ error: "Cap camp vàlid" }, { status: 400 });
+    }
+
+    const { data: result, error } = await supabase
+      .from("clickedu_students")
+      .update(sanitized)
+      .eq("id", id)
+      .select()
+      .single();
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ data: result });
+  }
+
+  // --- Handle yearly / nese data ---
+  if (!schoolYearId) {
     return NextResponse.json(
       { error: "Falten dades requerides" },
       { status: 400 }

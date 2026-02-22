@@ -44,6 +44,7 @@ interface NeseData {
 
 interface StudentNeseTabProps {
   neseData: NeseData | null;
+  idalu: string | null;
   userRole: UserRole;
   editing: boolean;
   onSave: (data: Record<string, any>) => Promise<void>;
@@ -81,9 +82,10 @@ const CURS_RETENCIO_OPTIONS = [
 ] as const;
 
 export const StudentNeseTab = forwardRef<EditableTabRef, StudentNeseTabProps>(
-  function StudentNeseTab({ neseData, userRole, editing, onSave }, ref) {
+  function StudentNeseTab({ neseData, idalu, userRole, editing, onSave }, ref) {
     const data = neseData || EMPTY_NESE;
     const [form, setForm] = useState<NeseData>({ ...data });
+    const [formIdalu, setFormIdalu] = useState(idalu || "");
 
     useImperativeHandle(ref, () => ({
       save: async () => {
@@ -95,10 +97,13 @@ export const StudentNeseTab = forwardRef<EditableTabRef, StudentNeseTabProps>(
             editableFields[key] = value;
           }
         }
+        // Include idalu separately (saved to clickedu_students, not nese)
+        editableFields._student_idalu = formIdalu || null;
         await onSave(editableFields);
       },
       cancel: () => {
         setForm({ ...data });
+        setFormIdalu(idalu || "");
       },
     }));
 
@@ -121,8 +126,14 @@ export const StudentNeseTab = forwardRef<EditableTabRef, StudentNeseTabProps>(
         <div className="grid gap-6">
           {/* Secretaria section */}
           <Section title="Dades administratives" badge="Secretaria" color="bg-rose-100 text-rose-800">
-            {/* Short fields: Data incorporació + SSD on same line */}
+            {/* Short fields: IDALU + Data incorporació + SSD on same line */}
             <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-4">
+              <FieldInput
+                label="IDALU"
+                value={formIdalu}
+                editing={editing}
+                onChange={(v) => setFormIdalu(v)}
+              />
               <FieldInput
                 label="Data incorporació"
                 value={form.data_incorporacio || ""}

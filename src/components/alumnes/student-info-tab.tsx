@@ -27,7 +27,6 @@ interface StudentInfoTabProps {
     class_name: string;
     class_id: number;
     clickedu_id: number;
-    idalu: string | null;
   };
   yearlyData: {
     id?: string;
@@ -99,9 +98,6 @@ export const StudentInfoTab = forwardRef<EditableTabRef, StudentInfoTabProps>(
           <div className="flex items-center gap-2 mt-1">
             <Badge variant="secondary">{student.class_name}</Badge>
             <Badge variant="secondary" className={`text-xs ${getEtapa(student.class_name).color}`}>{getEtapa(student.class_name).label}</Badge>
-            {student.idalu && (
-              <Badge variant="outline" className="text-xs text-muted-foreground">IDALU {student.idalu}</Badge>
-            )}
             {yearlyData?.graella_nese && (
               <Badge className="bg-amber-100 text-amber-800">NESE</Badge>
             )}

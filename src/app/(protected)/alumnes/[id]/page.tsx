@@ -133,12 +133,17 @@ export default function StudentDetailPage({
   const handleSaveNese = useCallback(
     async (formData: Record<string, any>) => {
       if (!data?.currentYear) return;
+
+      // Extract idalu (saved to clickedu_students, not nese table)
+      const { _student_idalu, ...neseFields } = formData;
+
+      // Save NESE data
       const res = await fetch(`/api/students/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           table: "student_nese_data",
-          data: formData,
+          data: neseFields,
           schoolYearId: data.currentYear.id,
         }),
       });
@@ -147,6 +152,24 @@ export default function StudentDetailPage({
         alert(err.error || "Error desant");
         throw new Error(err.error);
       }
+
+      // Save idalu to clickedu_students if changed
+      if (_student_idalu !== undefined) {
+        const res2 = await fetch(`/api/students/${id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            table: "clickedu_students",
+            data: { idalu: _student_idalu },
+          }),
+        });
+        if (!res2.ok) {
+          const err = await res2.json();
+          alert(err.error || "Error desant IDALU");
+          throw new Error(err.error);
+        }
+      }
+
       await fetchData();
     },
     [data?.currentYear, id, fetchData]
@@ -222,6 +245,7 @@ export default function StudentDetailPage({
         <StudentNeseTab
           ref={neseTabRef}
           neseData={data.neseData}
+          idalu={data.student.idalu}
           userRole={data.userRole}
           editing={editing}
           onSave={handleSaveNese}
