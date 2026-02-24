@@ -158,12 +158,10 @@ export async function GET(request: NextRequest) {
     });
   }
 
-  // Extract unique class names for filter options, in pedagogical order
+  // Extract available filter values from filtered data
   const CLASS_ORDER = ["I3", "I4", "I5", "P1", "P2", "P3", "P4", "P5", "P6", "E1", "E2", "E3", "E4"];
-  const allClassNames = [
-    ...new Set(
-      (data || []).map((s) => s.class_name).filter(Boolean)
-    ),
+  const availableClasses = [
+    ...new Set(filtered.map((s) => s.class_name).filter(Boolean)),
   ].sort((a, b) => {
     const idxA = CLASS_ORDER.indexOf(a);
     const idxB = CLASS_ORDER.indexOf(b);
@@ -173,9 +171,36 @@ export async function GET(request: NextRequest) {
     return idxA - idxB;
   });
 
+  const ETAPA_ORDER = ["infantil", "primaria", "secundaria"];
+  const availableEtapes = [
+    ...new Set(filtered.map((s) => {
+      const cn = s.class_name || "";
+      if (cn.startsWith("I")) return "infantil";
+      if (cn.startsWith("P")) return "primaria";
+      return "secundaria";
+    })),
+  ].sort((a, b) => ETAPA_ORDER.indexOf(a) - ETAPA_ORDER.indexOf(b));
+
+  const availableMesuraNese = [
+    ...new Set(filtered.map((s) => {
+      const nd = Array.isArray(s.student_nese_data) ? s.student_nese_data[0] : s.student_nese_data;
+      return nd?.mesura_nese as string | undefined;
+    }).filter(Boolean)),
+  ].sort();
+
+  const availableEstats = [
+    ...new Set(filtered.map((s) => {
+      const yd = Array.isArray(s.student_yearly_data) ? s.student_yearly_data[0] : s.student_yearly_data;
+      return yd?.estat as string | undefined;
+    }).filter(Boolean)),
+  ];
+
   return NextResponse.json({
     data: filtered,
     total: filtered.length,
-    availableClasses: allClassNames,
+    availableClasses,
+    availableEtapes,
+    availableMesuraNese,
+    availableEstats,
   });
 }

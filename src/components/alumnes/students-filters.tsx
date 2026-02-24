@@ -18,31 +18,35 @@ interface StudentsFiltersProps {
   filters: Filters;
   onFiltersChange: (filters: Filters) => void;
   availableClasses: string[];
+  availableEtapes: string[];
+  availableMesuraNese: string[];
+  availableEstats: string[];
 }
 
-const ETAPES = [
-  { value: "infantil", label: "Infantil" },
-  { value: "primaria", label: "Prim\u00e0ria" },
-  { value: "secundaria", label: "Secund\u00e0ria" },
-];
+const ETAPA_LABELS: Record<string, string> = {
+  infantil: "Infantil",
+  primaria: "Prim\u00e0ria",
+  secundaria: "Secund\u00e0ria",
+};
 
 const NESE_OPTIONS = [
   { value: "true", label: "Graella NESE" },
   { value: "false", label: "Sense NESE" },
 ];
 
-const MESURA_NESE_OPTIONS = [
-  { value: "pi_curricular", label: "PI curricular" },
-  { value: "pi_no_curricular", label: "PI no curricular" },
-  { value: "pi_nouvingut", label: "PI nouvingut" },
-  { value: "dua_misu", label: "DUA / MISU" },
-  { value: "no_mesures", label: "Sense mesures" },
-];
+const MESURA_LABELS: Record<string, string> = {
+  pi: "PI",
+  pi_curricular: "PI curricular",
+  pi_no_curricular: "PI no curricular",
+  pi_nouvingut: "PI nouvingut",
+  dua_misu: "DUA / MISU",
+  no_mesures: "Sense mesures",
+};
 
-const ESTAT_OPTIONS = [
-  { value: "pendent", label: "Pendent" },
-  { value: "resolt", label: "Resolt" },
-];
+const ESTAT_LABELS: Record<string, string> = {
+  pendent: "Pendent",
+  resolt: "Resolt",
+};
 
 const GROUP_COLORS: Record<string, { active: string; dot: string }> = {
   Etapa: { active: "bg-teal-600 text-white hover:bg-teal-700", dot: "bg-teal-500" },
@@ -90,6 +94,9 @@ export function StudentsFilters({
   filters,
   onFiltersChange,
   availableClasses,
+  availableEtapes,
+  availableMesuraNese,
+  availableEstats,
 }: StudentsFiltersProps) {
   const hasFilters =
     filters.search ||
@@ -102,6 +109,21 @@ export function StudentsFilters({
   const classOptions = availableClasses.map((c) => ({
     value: c,
     label: c,
+  }));
+
+  const etapaOptions = availableEtapes.map((v) => ({
+    value: v,
+    label: ETAPA_LABELS[v] || v,
+  }));
+
+  const mesuraOptions = availableMesuraNese.map((v) => ({
+    value: v,
+    label: MESURA_LABELS[v] || v,
+  }));
+
+  const estatOptions = availableEstats.map((v) => ({
+    value: v,
+    label: ESTAT_LABELS[v] || v,
   }));
 
   return (
@@ -140,17 +162,19 @@ export function StudentsFilters({
       </div>
 
       <div className="flex flex-wrap gap-4">
-        <ToggleGroup
-          label="Etapa"
-          options={ETAPES}
-          selected={filters.etapa}
-          onToggle={(val) => {
-            const newEtapa = filters.etapa.includes(val)
-              ? filters.etapa.filter((e) => e !== val)
-              : [...filters.etapa, val];
-            onFiltersChange({ ...filters, etapa: newEtapa });
-          }}
-        />
+        {etapaOptions.length > 0 && (
+          <ToggleGroup
+            label="Etapa"
+            options={etapaOptions}
+            selected={filters.etapa}
+            onToggle={(val) => {
+              const newEtapa = filters.etapa.includes(val)
+                ? filters.etapa.filter((e) => e !== val)
+                : [...filters.etapa, val];
+              onFiltersChange({ ...filters, etapa: newEtapa });
+            }}
+          />
+        )}
 
         {classOptions.length > 0 && (
           <ToggleGroup
@@ -176,27 +200,31 @@ export function StudentsFilters({
           }}
         />
 
-        <ToggleGroup
-          label="Mesura"
-          options={MESURA_NESE_OPTIONS}
-          selected={filters.mesuraNese}
-          onToggle={(val) => {
-            const newMesura = filters.mesuraNese.includes(val)
-              ? filters.mesuraNese.filter((m) => m !== val)
-              : [...filters.mesuraNese, val];
-            onFiltersChange({ ...filters, mesuraNese: newMesura });
-          }}
-        />
+        {mesuraOptions.length > 0 && (
+          <ToggleGroup
+            label="Mesura"
+            options={mesuraOptions}
+            selected={filters.mesuraNese}
+            onToggle={(val) => {
+              const newMesura = filters.mesuraNese.includes(val)
+                ? filters.mesuraNese.filter((m) => m !== val)
+                : [...filters.mesuraNese, val];
+              onFiltersChange({ ...filters, mesuraNese: newMesura });
+            }}
+          />
+        )}
 
-        <ToggleGroup
-          label="Estat"
-          options={ESTAT_OPTIONS}
-          selected={filters.estat ? [filters.estat] : []}
-          onToggle={(val) => {
-            const newVal = filters.estat === val ? "" : val;
-            onFiltersChange({ ...filters, estat: newVal });
-          }}
-        />
+        {estatOptions.length > 0 && (
+          <ToggleGroup
+            label="Estat"
+            options={estatOptions}
+            selected={filters.estat ? [filters.estat] : []}
+            onToggle={(val) => {
+              const newVal = filters.estat === val ? "" : val;
+              onFiltersChange({ ...filters, estat: newVal });
+            }}
+          />
+        )}
       </div>
     </div>
   );

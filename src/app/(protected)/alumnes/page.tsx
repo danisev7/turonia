@@ -45,6 +45,9 @@ function StudentsPageContent() {
   const [students, setStudents] = useState<any[]>([]);
   const [total, setTotal] = useState(0);
   const [availableClasses, setAvailableClasses] = useState<string[]>([]);
+  const [availableEtapes, setAvailableEtapes] = useState<string[]>([]);
+  const [availableMesuraNese, setAvailableMesuraNese] = useState<string[]>([]);
+  const [availableEstats, setAvailableEstats] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Local search input with debounce
@@ -106,6 +109,9 @@ function StudentsPageContent() {
           setStudents(json.data || []);
           setTotal(json.total || 0);
           setAvailableClasses(json.availableClasses || []);
+          setAvailableEtapes(json.availableEtapes || []);
+          setAvailableMesuraNese(json.availableMesuraNese || []);
+          setAvailableEstats(json.availableEstats || []);
         }
       } catch (err: any) {
         if (err.name === "AbortError") return; // Ignored — cancelled by newer request
@@ -208,6 +214,9 @@ function StudentsPageContent() {
         filters={{ ...filters, search: searchInput }}
         onFiltersChange={handleFiltersChange}
         availableClasses={availableClasses}
+        availableEtapes={availableEtapes}
+        availableMesuraNese={availableMesuraNese}
+        availableEstats={availableEstats}
       />
 
       {loading ? (
