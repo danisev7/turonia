@@ -33,8 +33,7 @@ export async function GET(request: NextRequest) {
       *,
       candidate_stages(stage),
       candidate_languages(language, level)
-    `,
-      { count: "exact" }
+    `
     );
 
   // Filters
@@ -69,18 +68,13 @@ export async function GET(request: NextRequest) {
   // Sort
   query = query.order(sortBy, { ascending: sortOrder });
 
-  // Pagination
-  const from = (page - 1) * perPage;
-  const to = from + perPage - 1;
-  query = query.range(from, to);
-
-  const { data, error, count } = await query;
+  const { data, error } = await query;
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  // Client-side filter for stages and languages (since they're in related tables)
+  // Post-query filters for related tables (stages, languages)
   let filtered = data || [];
 
   if (stages) {
@@ -101,11 +95,39 @@ export async function GET(request: NextRequest) {
     );
   }
 
+  // Compute available filter values from filtered data
+  const availableStages = [...new Set(
+    filtered.flatMap((c) => c.candidate_stages?.map((s: { stage: string }) => s.stage) || [])
+  )];
+  const availableStatuses = [...new Set(
+    filtered.map((c) => c.status).filter(Boolean)
+  )] as string[];
+  const availableEvaluations = [...new Set(
+    filtered.map((c) => c.evaluation).filter(Boolean)
+  )] as string[];
+  const availableSpecialties = [...new Set(
+    filtered.map((c) => c.specialty).filter(Boolean)
+  )].sort() as string[];
+  const availableLanguages = [...new Set(
+    filtered.flatMap((c) => c.candidate_languages?.map((l: { language: string }) => l.language) || [])
+  )].sort();
+
+  // Manual pagination
+  const total = filtered.length;
+  const totalPages = Math.ceil(total / perPage);
+  const from = (page - 1) * perPage;
+  const paginated = filtered.slice(from, from + perPage);
+
   return NextResponse.json({
-    data: filtered,
-    total: count ?? 0,
+    data: paginated,
+    total,
     page,
     perPage,
-    totalPages: Math.ceil((count ?? 0) / perPage),
+    totalPages,
+    availableStages,
+    availableStatuses,
+    availableEvaluations,
+    availableSpecialties,
+    availableLanguages,
   });
 }

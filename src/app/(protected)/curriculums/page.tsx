@@ -47,8 +47,11 @@ function CurriculumsContent() {
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
-  const [availableLanguages, setAvailableLanguages] = useState<string[]>([]);
+  const [availableStages, setAvailableStages] = useState<string[]>([]);
+  const [availableStatuses, setAvailableStatuses] = useState<string[]>([]);
+  const [availableEvaluations, setAvailableEvaluations] = useState<string[]>([]);
   const [availableSpecialties, setAvailableSpecialties] = useState<string[]>([]);
+  const [availableLanguages, setAvailableLanguages] = useState<string[]>([]);
 
   // Helper to update URL search params via router.replace
   const updateParams = useCallback(
@@ -135,22 +138,11 @@ function CurriculumsContent() {
     setCandidates(json.data || []);
     setTotal(json.total || 0);
     setTotalPages(json.totalPages || 1);
-
-    // Extract available languages
-    const langs = new Set<string>();
-    json.data?.forEach(
-      (c: { candidate_languages?: { language: string }[] }) => {
-        c.candidate_languages?.forEach((l) => langs.add(l.language));
-      }
-    );
-    setAvailableLanguages(Array.from(langs).sort());
-
-    // Extract available specialties
-    const specs = new Set<string>();
-    json.data?.forEach((c: { specialty?: string | null }) => {
-      if (c.specialty) specs.add(c.specialty);
-    });
-    setAvailableSpecialties(Array.from(specs).sort());
+    setAvailableStages(json.availableStages || []);
+    setAvailableStatuses(json.availableStatuses || []);
+    setAvailableEvaluations(json.availableEvaluations || []);
+    setAvailableSpecialties(json.availableSpecialties || []);
+    setAvailableLanguages(json.availableLanguages || []);
 
     setLoading(false);
   }, [filters, page, sortBy, sortOrder]);
@@ -168,8 +160,11 @@ function CurriculumsContent() {
 
       <CandidatesFilters
         filters={filters}
-        availableLanguages={availableLanguages}
+        availableStages={availableStages}
+        availableStatuses={availableStatuses}
+        availableEvaluations={availableEvaluations}
         availableSpecialties={availableSpecialties}
+        availableLanguages={availableLanguages}
         onFiltersChange={handleFiltersChange}
       />
 

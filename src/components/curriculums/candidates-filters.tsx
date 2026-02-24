@@ -5,24 +5,24 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { X, Search } from "lucide-react";
 
-const STAGES = [
-  { value: "infantil", label: "Infantil" },
-  { value: "primaria", label: "Primària" },
-  { value: "secundaria", label: "Secundària" },
-  { value: "altres", label: "Altres" },
-];
+const STAGE_LABELS: Record<string, string> = {
+  infantil: "Infantil",
+  primaria: "Primària",
+  secundaria: "Secundària",
+  altres: "Altres",
+};
 
-const STATUSES = [
-  { value: "pendent", label: "Pendent" },
-  { value: "vist", label: "Vist" },
-];
+const STATUS_LABELS: Record<string, string> = {
+  pendent: "Pendent",
+  vist: "Vist",
+};
 
-const EVALUATIONS = [
-  { value: "molt_interessant", label: "Molt Interessant" },
-  { value: "interessant", label: "Interessant" },
-  { value: "poc_interessant", label: "Poc Interessant" },
-  { value: "descartat", label: "Descartat" },
-];
+const EVALUATION_LABELS: Record<string, string> = {
+  molt_interessant: "Molt Interessant",
+  interessant: "Interessant",
+  poc_interessant: "Poc Interessant",
+  descartat: "Descartat",
+};
 
 export interface Filters {
   search: string;
@@ -37,8 +37,11 @@ export interface Filters {
 
 interface CandidatesFiltersProps {
   filters: Filters;
-  availableLanguages: string[];
+  availableStages: string[];
+  availableStatuses: string[];
+  availableEvaluations: string[];
   availableSpecialties: string[];
+  availableLanguages: string[];
   onFiltersChange: (filters: Filters) => void;
 }
 
@@ -86,8 +89,11 @@ function ToggleGroup({
 
 export function CandidatesFilters({
   filters,
-  availableLanguages,
+  availableStages,
+  availableStatuses,
+  availableEvaluations,
   availableSpecialties,
+  availableLanguages,
   onFiltersChange,
 }: CandidatesFiltersProps) {
   const toggleArrayFilter = (
@@ -171,46 +177,52 @@ export function CandidatesFilters({
       </div>
 
       <div className="flex flex-wrap gap-4">
-        <ToggleGroup
-          label="Etapa"
-          options={STAGES}
-          selected={filters.stages}
-          onToggle={(v) => toggleArrayFilter("stages", v)}
-        />
+        {availableStages.length > 0 && (
+          <ToggleGroup
+            label="Etapa"
+            options={availableStages.map((s) => ({ value: s, label: STAGE_LABELS[s] || s }))}
+            selected={filters.stages}
+            onToggle={(v) => toggleArrayFilter("stages", v)}
+          />
+        )}
 
-        <div className="space-y-1.5">
-          <div className="flex items-center gap-1.5">
-            <span className="h-2 w-2 rounded-full bg-sky-500" />
-            <span className="text-xs font-semibold text-foreground/70">Estat</span>
+        {availableStatuses.length > 0 && (
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-1.5">
+              <span className="h-2 w-2 rounded-full bg-sky-500" />
+              <span className="text-xs font-semibold text-foreground/70">Estat</span>
+            </div>
+            <div className="flex flex-wrap gap-1">
+              {availableStatuses.map((value) => (
+                <Badge
+                  key={value}
+                  variant={
+                    filters.status === value ? "default" : "outline"
+                  }
+                  className={`cursor-pointer text-xs ${filters.status === value ? "bg-sky-600 text-white hover:bg-sky-700" : ""}`}
+                  onClick={() =>
+                    onFiltersChange({
+                      ...filters,
+                      status:
+                        filters.status === value ? "" : value,
+                    })
+                  }
+                >
+                  {STATUS_LABELS[value] || value}
+                </Badge>
+              ))}
+            </div>
           </div>
-          <div className="flex flex-wrap gap-1">
-            {STATUSES.map((opt) => (
-              <Badge
-                key={opt.value}
-                variant={
-                  filters.status === opt.value ? "default" : "outline"
-                }
-                className={`cursor-pointer text-xs ${filters.status === opt.value ? "bg-sky-600 text-white hover:bg-sky-700" : ""}`}
-                onClick={() =>
-                  onFiltersChange({
-                    ...filters,
-                    status:
-                      filters.status === opt.value ? "" : opt.value,
-                  })
-                }
-              >
-                {opt.label}
-              </Badge>
-            ))}
-          </div>
-        </div>
+        )}
 
-        <ToggleGroup
-          label="Avaluació"
-          options={EVALUATIONS}
-          selected={filters.evaluations}
-          onToggle={(v) => toggleArrayFilter("evaluations", v)}
-        />
+        {availableEvaluations.length > 0 && (
+          <ToggleGroup
+            label="Avaluació"
+            options={availableEvaluations.map((e) => ({ value: e, label: EVALUATION_LABELS[e] || e }))}
+            selected={filters.evaluations}
+            onToggle={(v) => toggleArrayFilter("evaluations", v)}
+          />
+        )}
 
         {availableSpecialties.length > 0 && (
           <ToggleGroup
