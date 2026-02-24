@@ -12,6 +12,7 @@ interface Filters {
   etapa: string[];
   className: string[];
   graellaNese: string;
+  mesuraNese: string[];
   estat: string;
 }
 
@@ -30,6 +31,9 @@ function StudentsPageContent() {
         ? searchParams.get("className")!.split(",")
         : [],
       graellaNese: searchParams.get("graellaNese") || "",
+      mesuraNese: searchParams.get("mesuraNese")
+        ? searchParams.get("mesuraNese")!.split(",")
+        : [],
       estat: searchParams.get("estat") || "",
     };
   }, [searchParams]);
@@ -88,6 +92,8 @@ function StudentsPageContent() {
       if (filters.className.length)
         params.set("className", filters.className.join(","));
       if (filters.graellaNese) params.set("graellaNese", filters.graellaNese);
+      if (filters.mesuraNese.length)
+        params.set("mesuraNese", filters.mesuraNese.join(","));
       if (filters.estat) params.set("estat", filters.estat);
 
       try {
@@ -131,6 +137,7 @@ function StudentsPageContent() {
             etapa: newFilters.etapa.join(","),
             className: newFilters.className.join(","),
             graellaNese: newFilters.graellaNese,
+            mesuraNese: newFilters.mesuraNese.join(","),
             estat: newFilters.estat,
           });
         }, 350);
@@ -139,6 +146,7 @@ function StudentsPageContent() {
           newFilters.etapa.join(",") !== filters.etapa.join(",") ||
           newFilters.className.join(",") !== filters.className.join(",") ||
           newFilters.graellaNese !== filters.graellaNese ||
+          newFilters.mesuraNese.join(",") !== filters.mesuraNese.join(",") ||
           newFilters.estat !== filters.estat
         ) {
           updateParams({
@@ -146,6 +154,7 @@ function StudentsPageContent() {
             etapa: newFilters.etapa.join(","),
             className: newFilters.className.join(","),
             graellaNese: newFilters.graellaNese,
+            mesuraNese: newFilters.mesuraNese.join(","),
             estat: newFilters.estat,
           });
         }
@@ -157,6 +166,7 @@ function StudentsPageContent() {
           etapa: newFilters.etapa.join(","),
           className: newFilters.className.join(","),
           graellaNese: newFilters.graellaNese,
+          mesuraNese: newFilters.mesuraNese.join(","),
           estat: newFilters.estat,
         });
       }

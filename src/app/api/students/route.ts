@@ -37,6 +37,7 @@ export async function GET(request: NextRequest) {
   const etapa = searchParams.get("etapa") || "";
   const className = searchParams.get("className") || "";
   const graellaNese = searchParams.get("graellaNese") || "";
+  const mesuraNese = searchParams.get("mesuraNese") || "";
   const estat = searchParams.get("estat") || "";
   const sortBy = searchParams.get("sortBy") || "last_name";
   const sortOrder = searchParams.get("sortOrder") === "desc" ? false : true;
@@ -74,6 +75,10 @@ export async function GET(request: NextRequest) {
         curs_repeticio,
         estat,
         observacions,
+        school_year_id
+      ),
+      student_nese_data(
+        mesura_nese,
         school_year_id
       )
     `
@@ -131,6 +136,16 @@ export async function GET(request: NextRequest) {
         ? s.student_yearly_data[0]
         : s.student_yearly_data;
       return yearlyData?.graella_nese === isNese;
+    });
+  }
+
+  if (mesuraNese) {
+    const mesures = mesuraNese.split(",");
+    filtered = filtered.filter((s) => {
+      const neseData = Array.isArray(s.student_nese_data)
+        ? s.student_nese_data[0]
+        : s.student_nese_data;
+      return neseData?.mesura_nese && mesures.includes(neseData.mesura_nese);
     });
   }
 

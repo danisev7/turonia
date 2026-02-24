@@ -10,6 +10,7 @@ interface Filters {
   etapa: string[];
   className: string[];
   graellaNese: string;
+  mesuraNese: string[];
   estat: string;
 }
 
@@ -30,6 +31,14 @@ const NESE_OPTIONS = [
   { value: "false", label: "Sense NESE" },
 ];
 
+const MESURA_NESE_OPTIONS = [
+  { value: "pi_curricular", label: "PI curricular" },
+  { value: "pi_no_curricular", label: "PI no curricular" },
+  { value: "pi_nouvingut", label: "PI nouvingut" },
+  { value: "dua_misu", label: "DUA / MISU" },
+  { value: "no_mesures", label: "Sense mesures" },
+];
+
 const ESTAT_OPTIONS = [
   { value: "pendent", label: "Pendent" },
   { value: "resolt", label: "Resolt" },
@@ -39,6 +48,7 @@ const GROUP_COLORS: Record<string, { active: string; dot: string }> = {
   Etapa: { active: "bg-teal-600 text-white hover:bg-teal-700", dot: "bg-teal-500" },
   Classe: { active: "bg-sky-600 text-white hover:bg-sky-700", dot: "bg-sky-500" },
   NESE: { active: "bg-amber-500 text-white hover:bg-amber-600", dot: "bg-amber-500" },
+  Mesura: { active: "bg-rose-600 text-white hover:bg-rose-700", dot: "bg-rose-500" },
   Estat: { active: "bg-violet-600 text-white hover:bg-violet-700", dot: "bg-violet-500" },
 };
 
@@ -86,6 +96,7 @@ export function StudentsFilters({
     filters.etapa.length > 0 ||
     filters.className.length > 0 ||
     filters.graellaNese ||
+    filters.mesuraNese.length > 0 ||
     filters.estat;
 
   const classOptions = availableClasses.map((c) => ({
@@ -117,6 +128,7 @@ export function StudentsFilters({
                 etapa: [],
                 className: [],
                 graellaNese: "",
+                mesuraNese: [],
                 estat: "",
               })
             }
@@ -161,6 +173,18 @@ export function StudentsFilters({
           onToggle={(val) => {
             const newVal = filters.graellaNese === val ? "" : val;
             onFiltersChange({ ...filters, graellaNese: newVal });
+          }}
+        />
+
+        <ToggleGroup
+          label="Mesura"
+          options={MESURA_NESE_OPTIONS}
+          selected={filters.mesuraNese}
+          onToggle={(val) => {
+            const newMesura = filters.mesuraNese.includes(val)
+              ? filters.mesuraNese.filter((m) => m !== val)
+              : [...filters.mesuraNese, val];
+            onFiltersChange({ ...filters, mesuraNese: newMesura });
           }}
         />
 

@@ -248,7 +248,7 @@ function parseNeseSheet(
     if (h.includes("CURS") && (h.includes("RETENCI") || h.includes("RETENCIO"))) colMap["curs_retencio"] = col;
     if (h === "NISE" || h.includes("NISE")) colMap["nise"] = col;
     if (h === "SSD" || h.includes("SSD")) colMap["ssd"] = col;
-    if (h.includes("MESURA NESE")) colMap["mesura_nese"] = col;
+    if (h.includes("MESUR") && h.includes("NESE")) colMap["mesura_nese"] = col;
     if (h.includes("MATÈRIES") || h.includes("MATERIES") || h.includes("ÀMBITS") || h.includes("AMBITS")) colMap["materies_pi"] = col;
     if (h.includes("EIXOS")) colMap["eixos_pi"] = col;
     if (h.includes("NAC PI") || (h.includes("NAC") && h.includes("PI"))) colMap["nac_pi"] = col;
@@ -348,7 +348,7 @@ function parseNeseSheet(
 const MANUAL_NAME_MAP: Record<string, string> = {
   "ZAIF": "SAIF DIN BERAADI MARCHAN",
   "AYA": "AYA AHDOR OULAD CHAIB",
-  "WALID": "WALID IBN OMAR SENDI",
+  "WALID": "WALID MOUNACHIT EL GUENNOUNI",
   "ASHLYJHOANA DUARTE": "ASHLY JHOANA DUARTE HERNANDEZ",
   "DUARTE ASHLYJHOANA": "ASHLY JHOANA DUARTE HERNANDEZ",
   "LIAM JOSUE DELGADO": "LIAM JOSE DELGADO NEIRA",
@@ -362,6 +362,11 @@ const MANUAL_NAME_MAP: Record<string, string> = {
   "KIMBERLY ROMERO": "KIMBERLY ANDREA ROMERO LEON",
   "AHDOR ABDEL": "ABDEL BASSET AHDOR",
   "ABDEL AHDOR": "ABDEL BASSET AHDOR",
+  "LUCIA MORENO CID": "LUCIA MORENOCID SANCHEZ",
+  "MORENO CID LUCIA": "LUCIA MORENOCID SANCHEZ",
+  "ENZO LOZANO": "ENZO LOZANO AGUILAR",
+  "LOZANO ENZO": "ENZO LOZANO AGUILAR",
+  "UNAI": "UNAI GIMENEZ COMAS",
 };
 
 // Names that are garbage/notes, not real students
@@ -412,6 +417,7 @@ function fuzzyTokensMatch(excelTokens: string[], dbTokens: string[]): boolean {
  */
 function cleanName(name: string): string {
   return name
+    .split("\n")[0]               // Take only first line (ignore notes appended below)
     .replace(/\*/g, "")           // Remove asterisks
     .replace(/\b([A-Za-z])\./g, "$1") // Remove dots after single letters (M. → M)
     .replace(/\s+/g, " ")
@@ -500,9 +506,10 @@ async function matchStudents(
 
     // Step 3: Strict token-based matching (all Excel tokens must appear in DB name)
     // Uses tokenizeForMatching to skip single-char tokens (initials like M, N, S)
+    // Requires at least 2 tokens — single-token names use MANUAL_NAME_MAP or Step 5 (FIRSTNAME)
     if (!match) {
       const excelTokens = tokenizeForMatching(cleanedName);
-      if (excelTokens.length >= 1) {
+      if (excelTokens.length >= 2) {
         const candidates = dbNormalized.filter((db) =>
           tokensMatch(excelTokens, db.tokens)
         );
@@ -702,9 +709,9 @@ const FILE_CONFIGS: { file: string; type: ImportType; etapa: Etapa }[] = [
   { file: "docs/examples/INF - 24-25 a 25-26_Traspàs de tutories INFANTIL .xlsx", type: "traspass", etapa: "infantil" },
   { file: "docs/examples/24-25 a 25-26_Traspàs de tutories PRIMÀRIA.xlsx", type: "traspass", etapa: "primaria" },
   { file: "docs/examples/24-25 a 25-26_Traspàs de tutories ESO.xlsx", type: "traspass", etapa: "eso" },
-  { file: "docs/examples/INF_Alumnat NESE 24-25.xlsx", type: "nese", etapa: "infantil" },
-  { file: "docs/examples/PRI_Alumnat NESE 24-25.xlsx", type: "nese", etapa: "primaria" },
-  { file: "docs/examples/ESO_Alumnat NESE 24-25.xlsx", type: "nese", etapa: "eso" },
+  { file: "docs/examples/INF_Alumnat NESE 25-26.xlsx", type: "nese", etapa: "infantil" },
+  { file: "docs/examples/PRI_Alumnat NESE 25-26.xlsx", type: "nese", etapa: "primaria" },
+  { file: "docs/examples/ESO_Alumnat NESE 25-26.xlsx", type: "nese", etapa: "eso" },
 ];
 
 async function main() {
