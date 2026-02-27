@@ -68,11 +68,19 @@ export async function GET(
     .select("id, name, is_current")
     .order("name", { ascending: false });
 
-  // Get all yearly data for this student (for evolution)
+  // Get all yearly data for this student across years (via clickedu_id)
+  // Find all clickedu_students records with the same clickedu_id (one per year)
+  const { data: sameStudentRecords } = await supabase
+    .from("clickedu_students")
+    .select("id")
+    .eq("clickedu_id", student.clickedu_id);
+
+  const allStudentIds = sameStudentRecords?.map((s) => s.id) || [id];
+
   const { data: allYearlyData } = await supabase
     .from("student_yearly_data")
     .select("*, clickedu_years(name)")
-    .eq("student_id", id)
+    .in("student_id", allStudentIds)
     .order("created_at", { ascending: false });
 
   // Get user role

@@ -32,6 +32,28 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // Build a map: clickedu_id → student_id for target year
+  const { data: targetStudents } = await supabase
+    .from("clickedu_students")
+    .select("id, clickedu_id")
+    .eq("school_year_id", targetYearId);
+
+  const targetMap = new Map<number, string>();
+  for (const s of targetStudents || []) {
+    targetMap.set(s.clickedu_id, s.id);
+  }
+
+  // Build a map: source student_id → clickedu_id
+  const { data: sourceStudents } = await supabase
+    .from("clickedu_students")
+    .select("id, clickedu_id")
+    .eq("school_year_id", sourceYearId);
+
+  const sourceClickeduMap = new Map<string, number>();
+  for (const s of sourceStudents || []) {
+    sourceClickeduMap.set(s.id, s.clickedu_id);
+  }
+
   // Get source yearly data
   const { data: sourceYearly, error: yearlyError } = await supabase
     .from("student_yearly_data")
@@ -44,13 +66,22 @@ export async function POST(request: NextRequest) {
 
   let copiedYearly = 0;
   let copiedNese = 0;
+  let skippedStudents = 0;
   let errors = 0;
 
   // Copy yearly data (reset estat and keep structure)
   for (const record of sourceYearly || []) {
+    const clickeduId = sourceClickeduMap.get(record.student_id);
+    const targetStudentId = clickeduId !== undefined ? targetMap.get(clickeduId) : undefined;
+
+    if (!targetStudentId) {
+      skippedStudents++;
+      continue;
+    }
+
     const { error } = await supabase.from("student_yearly_data").upsert(
       {
-        student_id: record.student_id,
+        student_id: targetStudentId,
         school_year_id: targetYearId,
         graella_nese: record.graella_nese,
         curs_repeticio: null,
@@ -81,9 +112,14 @@ export async function POST(request: NextRequest) {
 
     if (!neseError && sourceNese) {
       for (const record of sourceNese) {
+        const clickeduId = sourceClickeduMap.get(record.student_id);
+        const targetStudentId = clickeduId !== undefined ? targetMap.get(clickeduId) : undefined;
+
+        if (!targetStudentId) continue;
+
         const { error } = await supabase.from("student_nese_data").upsert(
           {
-            student_id: record.student_id,
+            student_id: targetStudentId,
             school_year_id: targetYearId,
             data_incorporacio: record.data_incorporacio,
             escolaritzacio_previa: record.escolaritzacio_previa,
@@ -129,7 +165,8 @@ export async function POST(request: NextRequest) {
   return NextResponse.json({
     copiedYearly,
     copiedNese,
+    skippedStudents,
     errors,
-    message: `Còpia completada: ${copiedYearly} traspàs, ${copiedNese} NESE${errors > 0 ? `, ${errors} errors` : ""}`,
+    message: `Còpia completada: ${copiedYearly} traspàs, ${copiedNese} NESE${skippedStudents > 0 ? `, ${skippedStudents} alumnes no trobats al curs destí` : ""}${errors > 0 ? `, ${errors} errors` : ""}`,
   });
 }

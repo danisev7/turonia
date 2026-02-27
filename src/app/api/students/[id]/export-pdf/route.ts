@@ -219,10 +219,18 @@ export async function GET(
     neseData = data;
   }
 
+  // Get all yearly data across years (via clickedu_id)
+  const { data: sameStudentRecords } = await supabase
+    .from("clickedu_students")
+    .select("id")
+    .eq("clickedu_id", student.clickedu_id);
+
+  const allStudentIds = sameStudentRecords?.map((s) => s.id) || [id];
+
   const { data: allYearlyData } = await supabase
     .from("student_yearly_data")
     .select("*, clickedu_years(name)")
-    .eq("student_id", id)
+    .in("student_id", allStudentIds)
     .order("created_at", { ascending: false });
 
   // Etapa

@@ -83,7 +83,8 @@ export async function GET(request: NextRequest) {
       )
     `
     )
-    .eq("is_active", true);
+    .eq("is_active", true)
+    .eq("school_year_id", yearData.id);
 
   // Search filter
   if (search) {

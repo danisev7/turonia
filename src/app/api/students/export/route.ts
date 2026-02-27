@@ -43,6 +43,7 @@ export async function GET(request: NextRequest) {
     `
     )
     .eq("is_active", true)
+    .eq("school_year_id", yearData.id)
     .order("last_name", { ascending: true });
 
   if (error) {

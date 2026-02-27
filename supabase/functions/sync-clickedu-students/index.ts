@@ -247,13 +247,29 @@ Deno.serve(async (req: Request) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
+    // Get current school year
+    const { data: currentYear, error: yearError } = await supabase
+      .from("clickedu_years")
+      .select("id")
+      .eq("is_current", true)
+      .single();
+
+    if (yearError || !currentYear) {
+      return new Response(
+        JSON.stringify({ error: "No current school year found" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const schoolYearId = currentYear.id;
+
     // Step 1: Login to Clickedu
     const cookies = await clickeduLogin(username, password, passfileContent);
 
     // Step 2: Fetch student list
     const students = await fetchStudentList(cookies);
 
-    // Step 3: Upsert students
+    // Step 3: Upsert students (year-aware)
     let recordsOk = 0;
     let recordsError = 0;
     const errors: { clickedu_id: number; error: string }[] = [];
@@ -268,6 +284,7 @@ Deno.serve(async (req: Request) => {
         .upsert(
           {
             clickedu_id: student.clickedu_id,
+            school_year_id: schoolYearId,
             first_name: student.first_name,
             last_name: student.last_name,
             class_id: student.class_id,
@@ -276,7 +293,7 @@ Deno.serve(async (req: Request) => {
             list_synced_at: now,
             updated_at: now,
           },
-          { onConflict: "clickedu_id" }
+          { onConflict: "clickedu_id,school_year_id" }
         );
 
       if (error) {
@@ -287,11 +304,12 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    // Step 4: Mark students not in the list as inactive
+    // Step 4: Mark students not in the list as inactive (current year only)
     const { data: allExisting } = await supabase
       .from("clickedu_students")
       .select("clickedu_id")
-      .eq("is_active", true);
+      .eq("is_active", true)
+      .eq("school_year_id", schoolYearId);
 
     if (allExisting) {
       const toDeactivate = allExisting
@@ -302,11 +320,34 @@ Deno.serve(async (req: Request) => {
         await supabase
           .from("clickedu_students")
           .update({ is_active: false, updated_at: now })
+          .eq("school_year_id", schoolYearId)
           .in("clickedu_id", toDeactivate);
       }
     }
 
-    // Step 5: Log sync
+    // Step 5: Auto-create student_yearly_data for all active students of current year
+    const { data: activeStudents } = await supabase
+      .from("clickedu_students")
+      .select("id")
+      .eq("is_active", true)
+      .eq("school_year_id", schoolYearId);
+
+    if (activeStudents && activeStudents.length > 0) {
+      for (const student of activeStudents) {
+        await supabase
+          .from("student_yearly_data")
+          .upsert(
+            {
+              student_id: student.id,
+              school_year_id: schoolYearId,
+              updated_at: now,
+            },
+            { onConflict: "student_id,school_year_id", ignoreDuplicates: true }
+          );
+      }
+    }
+
+    // Step 6: Log sync
     const durationMs = Date.now() - startTime;
     const status =
       recordsError === 0 ? "completed" : recordsOk > 0 ? "partial" : "failed";

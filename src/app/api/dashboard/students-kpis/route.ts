@@ -11,11 +11,26 @@ export async function GET() {
     return NextResponse.json({ error: "No autenticat" }, { status: 401 });
   }
 
-  // Get all active students with their class_name
+  // Get current school year
+  const { data: yearData } = await supabase
+    .from("clickedu_years")
+    .select("id")
+    .eq("is_current", true)
+    .single();
+
+  if (!yearData) {
+    return NextResponse.json(
+      { error: "No hi ha curs escolar actiu" },
+      { status: 500 }
+    );
+  }
+
+  // Get all active students for current year
   const { data: students } = await supabase
     .from("clickedu_students")
     .select("class_name")
-    .eq("is_active", true);
+    .eq("is_active", true)
+    .eq("school_year_id", yearData.id);
 
   const all = students || [];
   const total = all.length;

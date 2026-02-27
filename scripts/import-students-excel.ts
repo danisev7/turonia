@@ -733,11 +733,12 @@ async function main() {
   const schoolYearId = yearData.id;
   console.log(`School year ID: ${schoolYearId}`);
 
-  // Get all active students
+  // Get all active students for the current school year
   const { data: dbStudents, error: studentsError } = await supabase
     .from("clickedu_students")
     .select("id, first_name, last_name")
-    .eq("is_active", true);
+    .eq("is_active", true)
+    .eq("school_year_id", schoolYearId);
 
   if (studentsError || !dbStudents) {
     console.error("Error fetching students:", studentsError?.message);
