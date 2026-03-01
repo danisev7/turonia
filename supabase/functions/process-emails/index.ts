@@ -257,7 +257,12 @@ async function processCV(
   const subject = getHeader(headers, "Subject");
   const emailDate = getHeader(headers, "Date");
 
-  if (attachments.length === 0) return;
+  if (attachments.length === 0) {
+    await supabase.from("processed_emails")
+      .update({ processing_status: "skipped", error_message: "CV email without attachments" })
+      .eq("id", processedEmailId);
+    return;
+  }
 
   const attachment = attachments[0];
   // Download attachment
@@ -586,12 +591,12 @@ Deno.serve(async (req: Request) => {
           isSent,
         });
 
-        // Record processed email
+        // Record processed email (initially as "processing", updated to "completed" after success)
         const { data: processedEmail, error: peError } = await supabase.from("processed_emails").insert({
           gmail_message_id: messageId,
           gmail_thread_id: msg.threadId,
           classification: classification.classification,
-          processing_status: "completed",
+          processing_status: "processing",
         }).select("id").single();
         if (peError) throw new Error(`Insert processed_email failed: ${peError.message}`);
 
@@ -615,18 +620,31 @@ Deno.serve(async (req: Request) => {
             results.classified.other++;
         }
 
+        // Mark as completed after successful processing
+        await supabase.from("processed_emails")
+          .update({ processing_status: "completed" })
+          .eq("id", processedEmail.id);
+
         results.processed++;
       } catch (error) {
         results.errors++;
         const errMsg = error instanceof Error ? error.message : "Unknown";
         results.details.push(`Error processing ${messageId}: ${errMsg}`);
 
-        // Record failed processing (ignore errors)
-        await supabase.from("processed_emails").insert({
-          gmail_message_id: messageId,
-          processing_status: "failed",
-          error_message: errMsg.substring(0, 500),
-        });
+        // Try to update existing record to "failed"
+        const { data: updated } = await supabase.from("processed_emails")
+          .update({ processing_status: "failed", error_message: errMsg.substring(0, 500) })
+          .eq("gmail_message_id", messageId)
+          .select("id");
+
+        // If no record was updated (error happened before insert), create one
+        if (!updated?.length) {
+          await supabase.from("processed_emails").insert({
+            gmail_message_id: messageId,
+            processing_status: "failed",
+            error_message: errMsg.substring(0, 500),
+          });
+        }
       }
     }
 
