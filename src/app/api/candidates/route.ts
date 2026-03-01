@@ -37,12 +37,6 @@ export async function GET(request: NextRequest) {
     );
 
   // Filters
-  if (search) {
-    query = query.or(
-      `first_name.ilike.%${search}%,last_name.ilike.%${search}%,email.ilike.%${search}%,phone.ilike.%${search}%`
-    );
-  }
-
   if (status) {
     query = query.eq("status", status);
   }
@@ -74,8 +68,20 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  // Post-query filters for related tables (stages, languages)
+  // Post-query filters
   let filtered = data || [];
+
+  if (search) {
+    const normalize = (s: string) =>
+      s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    const terms = normalize(search).split(/\s+/).filter(Boolean);
+    filtered = filtered.filter((c) => {
+      const text = normalize(
+        `${c.first_name || ""} ${c.last_name || ""} ${c.email || ""} ${c.phone || ""}`
+      );
+      return terms.every((term) => text.includes(term));
+    });
+  }
 
   if (stages) {
     const stageArray = stages.split(",");

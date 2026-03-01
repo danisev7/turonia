@@ -86,13 +86,6 @@ export async function GET(request: NextRequest) {
     .eq("is_active", true)
     .eq("school_year_id", yearData.id);
 
-  // Search filter
-  if (search) {
-    query = query.or(
-      `first_name.ilike.%${search}%,last_name.ilike.%${search}%`
-    );
-  }
-
   // Class name filter
   if (className) {
     const classNames = className.split(",");
@@ -116,6 +109,16 @@ export async function GET(request: NextRequest) {
   }
 
   let filtered = data || [];
+
+  if (search) {
+    const normalize = (s: string) =>
+      s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    const terms = normalize(search).split(/\s+/).filter(Boolean);
+    filtered = filtered.filter((s) => {
+      const text = normalize(`${s.first_name || ""} ${s.last_name || ""}`);
+      return terms.every((term) => text.includes(term));
+    });
+  }
 
   // Client-side filters for related data
   if (etapa) {
