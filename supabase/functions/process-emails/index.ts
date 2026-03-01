@@ -210,9 +210,9 @@ async function extractCandidate(
 // ── Gmail Label Mapping ──────────────────────────────────────────────
 const STAGE_LABEL_MAP: Record<string, string> = {
   infantil: "Currículums/Infantil",
-  primaria: "Currículums/Primaria",
-  secundaria: "Curriculums/Secundària",
-  altres: "Curriculums",
+  primaria: "Currículums/Primària",
+  secundaria: "Currículums/Secundària",
+  altres: "Currículums",
 };
 
 async function ensureAndGetLabelIds(creds: GmailCreds): Promise<Map<string, string>> {
@@ -390,7 +390,11 @@ async function processCV(
       }
     }
     if (labelIds.length > 0) {
-      try { await gmailModify(creds, msg.id, { addLabelIds: labelIds }); } catch { /* ignore label errors */ }
+      try {
+        await gmailModify(creds, msg.id, { addLabelIds: labelIds });
+      } catch (err) {
+        console.error(`Failed to apply labels to ${msg.id}:`, err);
+      }
     }
   }
 

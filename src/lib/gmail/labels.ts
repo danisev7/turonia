@@ -6,16 +6,16 @@ import type { GmailLabel } from "./types";
  */
 const STAGE_LABEL_MAP: Record<string, string> = {
   infantil: "Currículums/Infantil",
-  primaria: "Currículums/Primaria",
-  secundaria: "Curriculums/Secundària",
-  altres: "Curriculums",
+  primaria: "Currículums/Primària",
+  secundaria: "Currículums/Secundària",
+  altres: "Currículums",
 };
 
 /**
  * Get the Gmail label name for a given stage.
  */
 export function getGmailLabelForStage(stage: string): string {
-  return STAGE_LABEL_MAP[stage] || "Curriculums";
+  return STAGE_LABEL_MAP[stage] || "Currículums";
 }
 
 /**
