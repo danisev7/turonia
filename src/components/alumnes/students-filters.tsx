@@ -11,6 +11,7 @@ interface Filters {
   className: string[];
   graellaNese: string;
   mesuraNese: string[];
+  ssd: string;
   estat: string;
 }
 
@@ -34,6 +35,11 @@ const NESE_OPTIONS = [
   { value: "false", label: "Sense NESE" },
 ];
 
+const SSD_OPTIONS = [
+  { value: "true", label: "SSD" },
+  { value: "false", label: "Sense SSD" },
+];
+
 const MESURA_LABELS: Record<string, string> = {
   pi: "PI",
   pi_curricular: "PI curricular",
@@ -52,6 +58,7 @@ const GROUP_COLORS: Record<string, { active: string; dot: string }> = {
   Etapa: { active: "bg-teal-600 text-white hover:bg-teal-700", dot: "bg-teal-500" },
   Classe: { active: "bg-sky-600 text-white hover:bg-sky-700", dot: "bg-sky-500" },
   NESE: { active: "bg-amber-500 text-white hover:bg-amber-600", dot: "bg-amber-500" },
+  SSD: { active: "bg-emerald-600 text-white hover:bg-emerald-700", dot: "bg-emerald-500" },
   Mesura: { active: "bg-rose-600 text-white hover:bg-rose-700", dot: "bg-rose-500" },
   Estat: { active: "bg-violet-600 text-white hover:bg-violet-700", dot: "bg-violet-500" },
 };
@@ -104,6 +111,7 @@ export function StudentsFilters({
     filters.className.length > 0 ||
     filters.graellaNese ||
     filters.mesuraNese.length > 0 ||
+    filters.ssd ||
     filters.estat;
 
   const classOptions = availableClasses.map((c) => ({
@@ -151,6 +159,7 @@ export function StudentsFilters({
                 className: [],
                 graellaNese: "",
                 mesuraNese: [],
+                ssd: "",
                 estat: "",
               })
             }
@@ -197,6 +206,16 @@ export function StudentsFilters({
           onToggle={(val) => {
             const newVal = filters.graellaNese === val ? "" : val;
             onFiltersChange({ ...filters, graellaNese: newVal });
+          }}
+        />
+
+        <ToggleGroup
+          label="SSD"
+          options={SSD_OPTIONS}
+          selected={filters.ssd ? [filters.ssd] : []}
+          onToggle={(val) => {
+            const newVal = filters.ssd === val ? "" : val;
+            onFiltersChange({ ...filters, ssd: newVal });
           }}
         />
 

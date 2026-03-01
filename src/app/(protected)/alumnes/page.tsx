@@ -13,6 +13,7 @@ interface Filters {
   className: string[];
   graellaNese: string;
   mesuraNese: string[];
+  ssd: string;
   estat: string;
 }
 
@@ -34,6 +35,7 @@ function StudentsPageContent() {
       mesuraNese: searchParams.get("mesuraNese")
         ? searchParams.get("mesuraNese")!.split(",")
         : [],
+      ssd: searchParams.get("ssd") || "",
       estat: searchParams.get("estat") || "",
     };
   }, [searchParams]);
@@ -97,6 +99,7 @@ function StudentsPageContent() {
       if (filters.graellaNese) params.set("graellaNese", filters.graellaNese);
       if (filters.mesuraNese.length)
         params.set("mesuraNese", filters.mesuraNese.join(","));
+      if (filters.ssd) params.set("ssd", filters.ssd);
       if (filters.estat) params.set("estat", filters.estat);
 
       try {
@@ -144,6 +147,7 @@ function StudentsPageContent() {
             className: newFilters.className.join(","),
             graellaNese: newFilters.graellaNese,
             mesuraNese: newFilters.mesuraNese.join(","),
+            ssd: newFilters.ssd,
             estat: newFilters.estat,
           });
         }, 350);
@@ -153,6 +157,7 @@ function StudentsPageContent() {
           newFilters.className.join(",") !== filters.className.join(",") ||
           newFilters.graellaNese !== filters.graellaNese ||
           newFilters.mesuraNese.join(",") !== filters.mesuraNese.join(",") ||
+          newFilters.ssd !== filters.ssd ||
           newFilters.estat !== filters.estat
         ) {
           updateParams({
@@ -161,6 +166,7 @@ function StudentsPageContent() {
             className: newFilters.className.join(","),
             graellaNese: newFilters.graellaNese,
             mesuraNese: newFilters.mesuraNese.join(","),
+            ssd: newFilters.ssd,
             estat: newFilters.estat,
           });
         }
@@ -173,6 +179,7 @@ function StudentsPageContent() {
           className: newFilters.className.join(","),
           graellaNese: newFilters.graellaNese,
           mesuraNese: newFilters.mesuraNese.join(","),
+          ssd: newFilters.ssd,
           estat: newFilters.estat,
         });
       }

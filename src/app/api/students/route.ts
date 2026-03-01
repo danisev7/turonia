@@ -38,6 +38,7 @@ export async function GET(request: NextRequest) {
   const className = searchParams.get("className") || "";
   const graellaNese = searchParams.get("graellaNese") || "";
   const mesuraNese = searchParams.get("mesuraNese") || "";
+  const ssd = searchParams.get("ssd") || "";
   const estat = searchParams.get("estat") || "";
   const sortBy = searchParams.get("sortBy") || "last_name";
   const sortOrder = searchParams.get("sortOrder") === "desc" ? false : true;
@@ -79,6 +80,7 @@ export async function GET(request: NextRequest) {
       ),
       student_nese_data(
         mesura_nese,
+        ssd,
         school_year_id
       )
     `
@@ -150,6 +152,16 @@ export async function GET(request: NextRequest) {
         ? s.student_nese_data[0]
         : s.student_nese_data;
       return neseData?.mesura_nese && mesures.includes(neseData.mesura_nese);
+    });
+  }
+
+  if (ssd) {
+    const isSsd = ssd === "true";
+    filtered = filtered.filter((s) => {
+      const neseData = Array.isArray(s.student_nese_data)
+        ? s.student_nese_data[0]
+        : s.student_nese_data;
+      return neseData?.ssd === isSsd;
     });
   }
 
