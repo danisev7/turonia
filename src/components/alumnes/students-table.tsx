@@ -21,6 +21,12 @@ interface StudentYearlyData {
   school_year_id: string;
 }
 
+interface StudentNeseData {
+  mesura_nese: string | null;
+  ssd: boolean;
+  school_year_id: string;
+}
+
 interface Student {
   id: string;
   clickedu_id: number;
@@ -31,6 +37,7 @@ interface Student {
   is_repetidor: boolean;
   is_active: boolean;
   student_yearly_data: StudentYearlyData[] | StudentYearlyData;
+  student_nese_data: StudentNeseData[] | StudentNeseData;
 }
 
 interface StudentsTableProps {
@@ -48,6 +55,15 @@ function getEtapa(className: string): { label: string; color: string } {
     return { label: "Prim\u00e0ria", color: "bg-blue-100 text-blue-800 border-blue-200" };
   return { label: "Secund\u00e0ria", color: "bg-violet-100 text-violet-800 border-violet-200" };
 }
+
+const MESURA_LABELS: Record<string, string> = {
+  pi: "PI",
+  pi_curricular: "PI curricular",
+  pi_no_curricular: "PI no curricular",
+  pi_nouvingut: "PI nouvingut",
+  dua_misu: "DUA / MISU",
+  no_mesures: "Sense mesures",
+};
 
 function SortableHeader({
   label,
@@ -113,7 +129,8 @@ export function StudentsTable({
               />
               <TableHead>Etapa</TableHead>
               <TableHead>NESE</TableHead>
-              <TableHead>Repetició</TableHead>
+              <TableHead>SSD</TableHead>
+              <TableHead>Mesura</TableHead>
               <TableHead>Estat</TableHead>
               <TableHead className="max-w-[300px]">Observacions</TableHead>
             </TableRow>
@@ -122,7 +139,7 @@ export function StudentsTable({
             {students.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={7}
+                  colSpan={8}
                   className="text-center text-muted-foreground py-8"
                 >
                   No s&apos;han trobat alumnes
@@ -133,6 +150,9 @@ export function StudentsTable({
                 const yearlyData = Array.isArray(student.student_yearly_data)
                   ? student.student_yearly_data[0]
                   : student.student_yearly_data;
+                const neseData = Array.isArray(student.student_nese_data)
+                  ? student.student_nese_data[0]
+                  : student.student_nese_data;
                 const etapa = getEtapa(student.class_name);
 
                 return (
@@ -177,8 +197,21 @@ export function StudentsTable({
                         </Badge>
                       )}
                     </TableCell>
+                    <TableCell>
+                      {neseData?.ssd && (
+                        <Badge
+                          variant="secondary"
+                          className="text-xs bg-green-100 text-green-800"
+                        >
+                          SSD
+                        </Badge>
+                      )}
+                      {!neseData?.ssd && "—"}
+                    </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
-                      {yearlyData?.curs_repeticio || "—"}
+                      {neseData?.mesura_nese
+                        ? MESURA_LABELS[neseData.mesura_nese] ?? neseData.mesura_nese
+                        : "—"}
                     </TableCell>
                     <TableCell>
                       {yearlyData?.estat && (
