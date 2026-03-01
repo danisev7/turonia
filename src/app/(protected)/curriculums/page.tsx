@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useMemo, Suspense } from "react";
+import { useEffect, useRef, useState, useCallback, useMemo, Suspense } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import {
   CandidatesFilters,
@@ -42,6 +42,15 @@ function CurriculumsContent() {
   const sortBy = searchParams.get("sortBy") || "reception_date";
   const sortOrder = searchParams.get("sortOrder") || "desc";
 
+  // Local search input with debounce
+  const [searchInput, setSearchInput] = useState(filters.search);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Sync searchInput when URL search param changes externally (e.g. clear filters)
+  useEffect(() => {
+    setSearchInput(filters.search);
+  }, [filters.search]);
+
   // API response state (stays in useState)
   const [candidates, setCandidates] = useState<never[]>([]);
   const [total, setTotal] = useState(0);
@@ -70,33 +79,62 @@ function CurriculumsContent() {
     [searchParams, router, pathname]
   );
 
+  const buildFilterParams = useCallback(
+    (newFilters: Filters, searchOverride?: string) => ({
+      search: (searchOverride ?? newFilters.search) || undefined,
+      stages:
+        newFilters.stages.length > 0
+          ? newFilters.stages.join(",")
+          : undefined,
+      status: newFilters.status || undefined,
+      evaluations:
+        newFilters.evaluations.length > 0
+          ? newFilters.evaluations.join(",")
+          : undefined,
+      specialties:
+        newFilters.specialties.length > 0
+          ? newFilters.specialties.join(",")
+          : undefined,
+      languages:
+        newFilters.languages.length > 0
+          ? newFilters.languages.join(",")
+          : undefined,
+      dateFrom: newFilters.dateFrom || undefined,
+      dateTo: newFilters.dateTo || undefined,
+      page: undefined, // Reset page on filter change
+    }),
+    []
+  );
+
   const handleFiltersChange = useCallback(
     (newFilters: Filters) => {
-      updateParams({
-        search: newFilters.search || undefined,
-        stages:
-          newFilters.stages.length > 0
-            ? newFilters.stages.join(",")
-            : undefined,
-        status: newFilters.status || undefined,
-        evaluations:
-          newFilters.evaluations.length > 0
-            ? newFilters.evaluations.join(",")
-            : undefined,
-        specialties:
-          newFilters.specialties.length > 0
-            ? newFilters.specialties.join(",")
-            : undefined,
-        languages:
-          newFilters.languages.length > 0
-            ? newFilters.languages.join(",")
-            : undefined,
-        dateFrom: newFilters.dateFrom || undefined,
-        dateTo: newFilters.dateTo || undefined,
-        page: undefined, // Reset page on filter change
-      });
+      setSearchInput(newFilters.search);
+
+      if (newFilters.search !== filters.search) {
+        // Debounce search text to avoid corrupting accented characters
+        if (debounceRef.current) clearTimeout(debounceRef.current);
+        debounceRef.current = setTimeout(() => {
+          updateParams(buildFilterParams(newFilters));
+        }, 350);
+        // If other filters also changed, update those immediately
+        const otherChanged =
+          newFilters.stages.join(",") !== filters.stages.join(",") ||
+          newFilters.status !== filters.status ||
+          newFilters.evaluations.join(",") !== filters.evaluations.join(",") ||
+          newFilters.specialties.join(",") !== filters.specialties.join(",") ||
+          newFilters.languages.join(",") !== filters.languages.join(",") ||
+          newFilters.dateFrom !== filters.dateFrom ||
+          newFilters.dateTo !== filters.dateTo;
+        if (otherChanged) {
+          updateParams(buildFilterParams(newFilters, filters.search));
+        }
+      } else {
+        // Non-search filter change — update immediately
+        if (debounceRef.current) clearTimeout(debounceRef.current);
+        updateParams(buildFilterParams(newFilters));
+      }
     },
-    [updateParams]
+    [updateParams, buildFilterParams, filters]
   );
 
   function handleSort(column: string) {
@@ -159,7 +197,7 @@ function CurriculumsContent() {
       </div>
 
       <CandidatesFilters
-        filters={filters}
+        filters={{ ...filters, search: searchInput }}
         availableStages={availableStages}
         availableStatuses={availableStatuses}
         availableEvaluations={availableEvaluations}
