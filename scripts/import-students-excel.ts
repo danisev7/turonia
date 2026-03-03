@@ -56,7 +56,12 @@ function cellValue(cell: ExcelJS.CellValue): string {
     }
     if ("text" in cell) {
       const t = (cell as any).text;
-      return typeof t === "string" ? t.trim() : String(t ?? "").trim();
+      if (typeof t === "string") return t.trim();
+      // Hyperlink cells: {text: {richText: [...]}, hyperlink: "..."}
+      if (t && typeof t === "object" && "richText" in t && Array.isArray(t.richText)) {
+        return (t.richText as { text: string }[]).map((r) => String(r.text ?? "")).join("").trim();
+      }
+      return String(t ?? "").trim();
     }
     if ("result" in cell) {
       const r = (cell as any).result;
@@ -329,11 +334,13 @@ function parseNeseSheet(
     }
 
     // Normalize beca_mec
+    // IMPORTANT: check "no" before "candidat" because "No candidat MEC" contains both
     if (data.beca_mec && typeof data.beca_mec === "string") {
       const v = data.beca_mec.toLowerCase();
       if (v.includes("sol·licit") || v.includes("solicit") || v.includes("curs actual")) data.beca_mec = "sollicitada_curs_actual";
+      else if (v.startsWith("no") || v.includes("no candidat")) data.beca_mec = "no_candidat_mec";
       else if (v.includes("candidat") || v.includes("proper")) data.beca_mec = "candidat_proper_curs";
-      else if (v.includes("no")) data.beca_mec = "no_candidat_mec";
+      else data.beca_mec = "no_candidat_mec";
     }
 
     rows.push({ name, sheetName, data });
@@ -608,7 +615,8 @@ async function importFile(
   type: ImportType,
   etapa: Etapa,
   schoolYearId: string,
-  dbStudents: { id: string; first_name: string; last_name: string }[]
+  dbStudents: { id: string; first_name: string; last_name: string }[],
+  onlyField?: string
 ): Promise<UnmatchedStudent[]> {
   console.log(`\nImporting: ${path.basename(filePath)} (${type}, ${etapa})`);
 
@@ -684,7 +692,10 @@ async function importFile(
         "observacions_curs", "dades_rellevants_historic",
       ];
 
-      for (const field of fields) {
+      // When --only-field is set, only include that specific field
+      const activeFields = onlyField ? fields.filter((f) => f === onlyField) : fields;
+
+      for (const field of activeFields) {
         if (m.data[field] !== undefined) {
           record[field] = m.data[field];
         }
@@ -717,6 +728,8 @@ const FILE_CONFIGS: { file: string; type: ImportType; etapa: Etapa }[] = [
 async function main() {
   const args = process.argv.slice(2);
   const isAll = args.includes("--all");
+  const onlyFieldIdx = args.indexOf("--only-field");
+  const onlyField = onlyFieldIdx !== -1 ? args[onlyFieldIdx + 1] : undefined;
 
   // Get school year
   const { data: yearData, error: yearError } = await supabase
@@ -757,7 +770,7 @@ async function main() {
         console.warn(`File not found: ${filePath}`);
         continue;
       }
-      const unmatched = await importFile(filePath, config.type, config.etapa, schoolYearId, dbStudents);
+      const unmatched = await importFile(filePath, config.type, config.etapa, schoolYearId, dbStudents, onlyField);
       allUnmatched = allUnmatched.concat(unmatched);
     }
   } else {
@@ -766,8 +779,8 @@ async function main() {
     const fileIdx = args.indexOf("--file");
 
     if (typeIdx === -1 || etapaIdx === -1 || fileIdx === -1) {
-      console.error("Usage: --type traspass|nese --etapa infantil|primaria|eso --file <path>");
-      console.error("   or: --all");
+      console.error("Usage: --type traspass|nese --etapa infantil|primaria|eso --file <path> [--only-field <field>]");
+      console.error("   or: --all [--only-field <field>]");
       process.exit(1);
     }
 
@@ -775,7 +788,7 @@ async function main() {
     const etapa = args[etapaIdx + 1] as Etapa;
     const filePath = path.resolve(args[fileIdx + 1]);
 
-    const unmatched = await importFile(filePath, type, etapa, schoolYearId, dbStudents);
+    const unmatched = await importFile(filePath, type, etapa, schoolYearId, dbStudents, onlyField);
     allUnmatched = unmatched;
   }
 

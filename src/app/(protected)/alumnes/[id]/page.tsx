@@ -243,6 +243,7 @@ export default function StudentDetailPage({
           ref={neseTabRef}
           neseData={data.neseData}
           idalu={data.student.idalu}
+          isNese={data.yearlyData?.graella_nese ?? false}
           userRole={data.userRole}
           editing={editing}
           onSave={handleSaveNese}

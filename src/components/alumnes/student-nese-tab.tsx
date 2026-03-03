@@ -16,6 +16,21 @@ import { canEditField } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
 import type { EditableTabRef } from "./student-info-tab";
 
+/** Split text into plain segments and clickable URLs */
+function linkify(text: string): React.ReactNode[] {
+  const urlRe = /(https?:\/\/[^\s]+)/g;
+  const parts = text.split(urlRe);
+  return parts.map((part, i) =>
+    urlRe.test(part) ? (
+      <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline break-all">
+        {part}
+      </a>
+    ) : (
+      part
+    )
+  );
+}
+
 interface NeseData {
   id?: string;
   data_incorporacio: string | null;
@@ -45,6 +60,7 @@ interface NeseData {
 interface StudentNeseTabProps {
   neseData: NeseData | null;
   idalu: string | null;
+  isNese: boolean;
   userRole: UserRole;
   editing: boolean;
   onSave: (data: Record<string, any>) => Promise<void>;
@@ -78,11 +94,11 @@ const EMPTY_NESE: NeseData = {
 const CURS_RETENCIO_OPTIONS = [
   "I3", "I4", "I5",
   "P1", "P2", "P3", "P4", "P5", "P6",
-  "E1", "E2", "E3", "E4",
+  "S1", "S2", "S3", "S4",
 ] as const;
 
 export const StudentNeseTab = forwardRef<EditableTabRef, StudentNeseTabProps>(
-  function StudentNeseTab({ neseData, idalu, userRole, editing, onSave }, ref) {
+  function StudentNeseTab({ neseData, idalu, isNese, userRole, editing, onSave }, ref) {
     const data = neseData || EMPTY_NESE;
     const [form, setForm] = useState<NeseData>({ ...data });
     const [formIdalu, setFormIdalu] = useState(idalu || "");
@@ -116,13 +132,13 @@ export const StudentNeseTab = forwardRef<EditableTabRef, StudentNeseTabProps>(
         <h2 className="text-xl font-semibold">Dades NESE</h2>
       </div>
 
-      {!neseData && !editing && (
+      {!neseData && !editing && !isNese && (
         <div className="text-center py-8 text-muted-foreground">
           <p>No hi ha dades NESE per aquest curs.</p>
         </div>
       )}
 
-      {(neseData || editing) && (
+      {(neseData || editing || isNese) && (
         <div className="grid gap-6">
           {/* Secretaria section */}
           <Section title="Dades administratives" badge="Secretaria" color="bg-rose-100 text-rose-800">
@@ -234,6 +250,12 @@ export const StudentNeseTab = forwardRef<EditableTabRef, StudentNeseTabProps>(
 
           {/* Tutor section */}
           <Section title="Seguiment tutoria" badge="Tutor/a" color="bg-green-100 text-green-800">
+            <FieldText
+              label="Observacions curs actual"
+              value={form.observacions_curs || ""}
+              editing={isFieldEditable("observacions_curs")}
+              onChange={(v) => setForm({ ...form, observacions_curs: v || null })}
+            />
             {/* Short fields row: CAD + Curs retenció */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <FieldText
@@ -290,12 +312,6 @@ export const StudentNeseTab = forwardRef<EditableTabRef, StudentNeseTabProps>(
               value={form.serveis_externs || ""}
               editing={isFieldEditable("serveis_externs")}
               onChange={(v) => setForm({ ...form, serveis_externs: v || null })}
-            />
-            <FieldText
-              label="Observacions curs actual"
-              value={form.observacions_curs || ""}
-              editing={isFieldEditable("observacions_curs")}
-              onChange={(v) => setForm({ ...form, observacions_curs: v || null })}
             />
             <FieldText
               label="Dades rellevants (Històric)"
@@ -355,7 +371,7 @@ function FieldText({
         <Textarea value={value} onChange={(e) => onChange(e.target.value)} rows={2} />
       ) : (
         <p className="text-sm whitespace-pre-wrap">
-          {value || <span className="text-muted-foreground">&mdash;</span>}
+          {value ? linkify(value) : <span className="text-muted-foreground">&mdash;</span>}
         </p>
       )}
     </div>

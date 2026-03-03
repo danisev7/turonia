@@ -59,7 +59,7 @@ export async function GET() {
   const classOrder = [
     "I3", "I4", "I5",
     "P1", "P2", "P3", "P4", "P5", "P6",
-    "E1", "E2", "E3", "E4",
+    "S1", "S2", "S3", "S4",
   ];
   const sortedClasses = Object.entries(byClass)
     .sort(([a], [b]) => {

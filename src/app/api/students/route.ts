@@ -175,7 +175,7 @@ export async function GET(request: NextRequest) {
   }
 
   // Extract available filter values from filtered data
-  const CLASS_ORDER = ["I3", "I4", "I5", "P1", "P2", "P3", "P4", "P5", "P6", "E1", "E2", "E3", "E4"];
+  const CLASS_ORDER = ["I3", "I4", "I5", "P1", "P2", "P3", "P4", "P5", "P6", "S1", "S2", "S3", "S4"];
   const availableClasses = [
     ...new Set(filtered.map((s) => s.class_name).filter(Boolean)),
   ].sort((a, b) => {

@@ -27,6 +27,23 @@ const CLASS_NAME_TO_ID: Record<string, number> = {
   "Quart d'ESO": 117,
 };
 
+// Normalize long Clickedu class names to short codes
+const CLASS_NAME_NORMALIZE: Record<string, string> = {
+  "Infantil 3": "I3",
+  "Infantil 4": "I4",
+  "Infantil 5": "I5",
+  "Primer de Primària": "P1",
+  "Segon de Primària": "P2",
+  "Tercer de Primària": "P3",
+  "Quart de Primària": "P4",
+  "Cinquè de Primària": "P5",
+  "Sisè de Primària": "P6",
+  "Primer d'ESO": "S1",
+  "Segon d'ESO": "S2",
+  "Tercer d'ESO": "S3",
+  "Quart d'ESO": "S4",
+};
+
 interface Student {
   clickedu_id: number;
   first_name: string;
@@ -196,7 +213,7 @@ async function fetchStudentList(cookies: string[]): Promise<Student[]> {
       first_name: firstName,
       last_name: lastName,
       class_id: classId,
-      class_name: className,
+      class_name: CLASS_NAME_NORMALIZE[baseClassName] || baseClassName,
     });
   }
 
