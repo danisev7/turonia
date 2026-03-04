@@ -118,13 +118,14 @@ export const StudentInfoTab = forwardRef<EditableTabRef, StudentInfoTabProps>(
             </label>
             {editing ? (
               <Select
-                value={form.estat || ""}
-                onValueChange={(v) => setForm({ ...form, estat: v || "" })}
+                value={form.estat || "__none__"}
+                onValueChange={(v) => setForm({ ...form, estat: v === "__none__" ? "" : v })}
               >
                 <SelectTrigger className="w-36">
                   <SelectValue placeholder="Seleccionar..." />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="__none__">Sense estat</SelectItem>
                   <SelectItem value="pendent">Pendent</SelectItem>
                   <SelectItem value="resolt">Resolt</SelectItem>
                 </SelectContent>
