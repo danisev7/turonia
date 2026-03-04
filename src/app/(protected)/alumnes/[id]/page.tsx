@@ -124,9 +124,8 @@ export default function StudentDetailPage({
         alert(err.error || "Error desant");
         throw new Error(err.error);
       }
-      await fetchData();
     },
-    [data?.currentYear, id, fetchData]
+    [data?.currentYear, id]
   );
 
   const handleSaveNese = useCallback(
@@ -168,10 +167,8 @@ export default function StudentDetailPage({
           throw new Error(err.error);
         }
       }
-
-      await fetchData();
     },
-    [data?.currentYear, id, fetchData]
+    [data?.currentYear, id]
   );
 
   const handleSaveAll = useCallback(async () => {
@@ -181,13 +178,14 @@ export default function StudentDetailPage({
         infoTabRef.current?.save(),
         neseTabRef.current?.save(),
       ]);
+      await fetchData();
       setEditing(false);
     } catch {
       // Individual handlers already show alert()
     } finally {
       setSaving(false);
     }
-  }, []);
+  }, [fetchData]);
 
   const handleCancelAll = useCallback(() => {
     infoTabRef.current?.cancel();
@@ -357,7 +355,7 @@ export default function StudentDetailPage({
             ))}
           </TabsList>
           {sections.map((s) => (
-            <TabsContent key={s.key} value={s.key} className="mt-4">
+            <TabsContent forceMount key={s.key} value={s.key} className="mt-4 data-[state=inactive]:hidden">
               {s.content}
             </TabsContent>
           ))}

@@ -50,6 +50,7 @@ interface Student {
   last_name: string;
   class_id: number;
   class_name: string;
+  is_repetidor: boolean;
 }
 
 // ── Clickedu Login (2-step) ─────────────────────────────────────────
@@ -206,6 +207,7 @@ async function fetchStudentList(cookies: string[]): Promise<Student[]> {
 
     // Strip suffixes like "(repetidor)" for class matching
     const baseClassName = className.replace(/\s*\(.*\)$/, "").trim();
+    const isRepetidor = className !== baseClassName;
     const classId = CLASS_NAME_TO_ID[baseClassName] || CLASS_NAME_TO_ID[className] || 0;
 
     students.push({
@@ -214,6 +216,7 @@ async function fetchStudentList(cookies: string[]): Promise<Student[]> {
       last_name: lastName,
       class_id: classId,
       class_name: CLASS_NAME_NORMALIZE[baseClassName] || baseClassName,
+      is_repetidor: isRepetidor,
     });
   }
 
@@ -306,6 +309,7 @@ Deno.serve(async (req: Request) => {
             last_name: student.last_name,
             class_id: student.class_id,
             class_name: student.class_name,
+            is_repetidor: student.is_repetidor,
             is_active: true,
             list_synced_at: now,
             updated_at: now,
