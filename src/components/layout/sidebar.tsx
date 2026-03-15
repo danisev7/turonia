@@ -8,6 +8,7 @@ import {
   LayoutDashboard,
   FileText,
   GraduationCap,
+  Settings,
   ChevronLeft,
   ChevronRight,
   type LucideIcon,
@@ -21,6 +22,7 @@ const iconMap: Record<string, LucideIcon> = {
   LayoutDashboard,
   FileText,
   GraduationCap,
+  Settings,
 };
 
 interface SidebarProps {

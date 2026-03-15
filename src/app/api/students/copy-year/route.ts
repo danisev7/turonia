@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await request.json();
-  const { sourceYearId, targetYearId, copyNese } = body;
+  const { sourceYearId, targetYearId, copyNese, copyPi } = body;
 
   if (!sourceYearId || !targetYearId) {
     return NextResponse.json(
@@ -64,15 +64,21 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: yearlyError.message }, { status: 500 });
   }
 
+  // Helper: resolve source student_id → target student_id
+  function resolveTargetStudentId(sourceStudentId: string): string | undefined {
+    const clickeduId = sourceClickeduMap.get(sourceStudentId);
+    return clickeduId !== undefined ? targetMap.get(clickeduId) : undefined;
+  }
+
   let copiedYearly = 0;
   let copiedNese = 0;
+  let copiedPi = 0;
   let skippedStudents = 0;
   let errors = 0;
 
   // Copy yearly data (reset estat and keep structure)
   for (const record of sourceYearly || []) {
-    const clickeduId = sourceClickeduMap.get(record.student_id);
-    const targetStudentId = clickeduId !== undefined ? targetMap.get(clickeduId) : undefined;
+    const targetStudentId = resolveTargetStudentId(record.student_id);
 
     if (!targetStudentId) {
       skippedStudents++;
@@ -112,8 +118,7 @@ export async function POST(request: NextRequest) {
 
     if (!neseError && sourceNese) {
       for (const record of sourceNese) {
-        const clickeduId = sourceClickeduMap.get(record.student_id);
-        const targetStudentId = clickeduId !== undefined ? targetMap.get(clickeduId) : undefined;
+        const targetStudentId = resolveTargetStudentId(record.student_id);
 
         if (!targetStudentId) continue;
 
@@ -162,11 +167,192 @@ export async function POST(request: NextRequest) {
     }
   }
 
+  // Copy PI documents and all child tables if requested
+  if (copyPi) {
+    const { data: sourcePiDocs, error: piError } = await supabase
+      .from("pi_documents")
+      .select("*")
+      .eq("school_year_id", sourceYearId);
+
+    if (!piError && sourcePiDocs) {
+      for (const doc of sourcePiDocs) {
+        const targetStudentId = resolveTargetStudentId(doc.student_id);
+        if (!targetStudentId) continue;
+
+        // Check if target already has a PI document
+        const { data: existing } = await supabase
+          .from("pi_documents")
+          .select("id")
+          .eq("student_id", targetStudentId)
+          .eq("school_year_id", targetYearId)
+          .single();
+
+        if (existing) continue; // Don't overwrite existing PI
+
+        // Insert pi_document (reset horari)
+        const { data: newDoc, error: docError } = await supabase
+          .from("pi_documents")
+          .insert({
+            student_id: targetStudentId,
+            school_year_id: targetYearId,
+            model: doc.model,
+            prev_universal: doc.prev_universal,
+            prev_addicional: doc.prev_addicional,
+            prev_intensiu: doc.prev_intensiu,
+            just_nee: doc.just_nee,
+            just_dea: doc.just_dea,
+            just_tea: doc.just_tea,
+            just_nouvingut: doc.just_nouvingut,
+            just_altes_cap: doc.just_altes_cap,
+            just_social: doc.just_social,
+            just_altres: doc.just_altres,
+            just_text: doc.just_text,
+            altres_orientacions: doc.altres_orientacions,
+            horari: null, // Reset horari for new year
+          })
+          .select("id")
+          .single();
+
+        if (docError || !newDoc) {
+          errors++;
+          continue;
+        }
+
+        const newDocId = newDoc.id;
+        copiedPi++;
+
+        // Copy pi_dades_materies + their children
+        const { data: sourceMateries } = await supabase
+          .from("pi_dades_materies")
+          .select("*")
+          .eq("pi_document_id", doc.id);
+
+        if (sourceMateries) {
+          for (const mat of sourceMateries) {
+            const { data: newMat } = await supabase
+              .from("pi_dades_materies")
+              .insert({
+                pi_document_id: newDocId,
+                materia: mat.materia,
+                docent: mat.docent,
+                nivell: mat.nivell,
+                observacions: mat.observacions,
+                sort_order: mat.sort_order,
+              })
+              .select("id")
+              .single();
+
+            if (!newMat) continue;
+
+            // Copy pi_materia_mesures
+            const { data: sourceMesures } = await supabase
+              .from("pi_materia_mesures")
+              .select("*")
+              .eq("pi_materia_id", mat.id);
+
+            if (sourceMesures) {
+              for (const mes of sourceMesures) {
+                await supabase.from("pi_materia_mesures").insert({
+                  pi_materia_id: newMat.id,
+                  tipus: mes.tipus,
+                  mesures: mes.mesures,
+                  observacions: mes.observacions,
+                  sort_order: mes.sort_order,
+                });
+              }
+            }
+
+            // Copy pi_materia_curriculum (reset avaluacio)
+            const { data: sourceCurr } = await supabase
+              .from("pi_materia_curriculum")
+              .select("*")
+              .eq("pi_materia_id", mat.id);
+
+            if (sourceCurr) {
+              for (const cur of sourceCurr) {
+                await supabase.from("pi_materia_curriculum").insert({
+                  pi_materia_id: newMat.id,
+                  nivell: cur.nivell,
+                  competencia: cur.competencia,
+                  criteris: cur.criteris,
+                  sabers: cur.sabers,
+                  instruments: cur.instruments,
+                  avaluacio: null, // Reset for new year
+                  sort_order: cur.sort_order,
+                });
+              }
+            }
+          }
+        }
+
+        // Copy pi_dades_professionals
+        const { data: sourceProfs } = await supabase
+          .from("pi_dades_professionals")
+          .select("*")
+          .eq("pi_document_id", doc.id);
+
+        if (sourceProfs) {
+          for (const prof of sourceProfs) {
+            await supabase.from("pi_dades_professionals").insert({
+              pi_document_id: newDocId,
+              professional: prof.professional,
+              nom: prof.nom,
+              contacte: prof.contacte,
+              notes: prof.notes,
+              sort_order: prof.sort_order,
+            });
+          }
+        }
+
+        // Copy pi_orientacions
+        const { data: sourceOrient } = await supabase
+          .from("pi_orientacions")
+          .select("*")
+          .eq("pi_document_id", doc.id);
+
+        if (sourceOrient) {
+          for (const ori of sourceOrient) {
+            await supabase.from("pi_orientacions").insert({
+              pi_document_id: newDocId,
+              tipus: ori.tipus,
+              mesura: ori.mesura,
+              sort_order: ori.sort_order,
+            });
+          }
+        }
+
+        // Copy pi_comp_transversals (reset avaluacio)
+        const { data: sourceTransv } = await supabase
+          .from("pi_comp_transversals")
+          .select("*")
+          .eq("pi_document_id", doc.id);
+
+        if (sourceTransv) {
+          for (const tr of sourceTransv) {
+            await supabase.from("pi_comp_transversals").insert({
+              pi_document_id: newDocId,
+              nivell: tr.nivell,
+              area: tr.area,
+              especifica: tr.especifica,
+              criteris: tr.criteris,
+              sabers: tr.sabers,
+              avaluacio: null, // Reset for new year
+              sort_order: tr.sort_order,
+            });
+          }
+        }
+
+        // pi_seguiment_* NOT copied (new year = fresh signatures/meetings)
+      }
+    }
+  }
+
   return NextResponse.json({
     copiedYearly,
     copiedNese,
+    copiedPi,
     skippedStudents,
     errors,
-    message: `Còpia completada: ${copiedYearly} traspàs, ${copiedNese} NESE${skippedStudents > 0 ? `, ${skippedStudents} alumnes no trobats al curs destí` : ""}${errors > 0 ? `, ${errors} errors` : ""}`,
+    message: `Còpia completada: ${copiedYearly} traspàs, ${copiedNese} NESE, ${copiedPi} PI${skippedStudents > 0 ? `, ${skippedStudents} alumnes no trobats al curs destí` : ""}${errors > 0 ? `, ${errors} errors` : ""}`,
   });
 }
