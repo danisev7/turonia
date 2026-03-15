@@ -1,6 +1,6 @@
 import type { UserRole } from "@/types";
 
-type Section = "alumnes" | "alumnes_nese" | "curriculums" | "dashboard";
+type Section = "alumnes" | "alumnes_nese" | "alumnes_pi" | "configuracio_pi" | "curriculums" | "dashboard";
 type Action = "read" | "write";
 
 const ROLE_PERMISSIONS: Record<UserRole, Record<Section, Action[]>> = {
@@ -9,48 +9,64 @@ const ROLE_PERMISSIONS: Record<UserRole, Record<Section, Action[]>> = {
     curriculums: ["read", "write"],
     alumnes: ["read", "write"],
     alumnes_nese: ["read", "write"],
+    alumnes_pi: ["read", "write"],
+    configuracio_pi: ["read", "write"],
   },
   direccio: {
     dashboard: ["read"],
     curriculums: ["read", "write"],
     alumnes: ["read", "write"],
     alumnes_nese: ["read", "write"],
+    alumnes_pi: ["read", "write"],
+    configuracio_pi: ["read", "write"],
   },
   tutor: {
     dashboard: ["read"],
     curriculums: [],
     alumnes: ["read", "write"],
     alumnes_nese: ["read", "write"],
+    alumnes_pi: ["read", "write"],
+    configuracio_pi: [],
   },
   poe: {
     dashboard: ["read"],
     curriculums: [],
     alumnes: ["read"],
     alumnes_nese: ["read", "write"],
+    alumnes_pi: ["read"],
+    configuracio_pi: [],
   },
   mesi: {
     dashboard: ["read"],
     curriculums: [],
     alumnes: ["read"],
     alumnes_nese: ["read", "write"],
+    alumnes_pi: ["read"],
+    configuracio_pi: [],
   },
   secretaria: {
     dashboard: ["read"],
     curriculums: [],
     alumnes: ["read"],
     alumnes_nese: ["read", "write"],
+    alumnes_pi: ["read"],
+    configuracio_pi: [],
   },
   professor: {
     dashboard: ["read"],
     curriculums: [],
     alumnes: ["read"],
     alumnes_nese: ["read"],
+    alumnes_pi: ["read"],
+    configuracio_pi: [],
   },
   convidat: {
     dashboard: ["read"],
     curriculums: [],
     alumnes: [],
     alumnes_nese: [],
+    alumnes_pi: [],
+    configuracio_pi: [],
   },
 };
 
@@ -151,6 +167,13 @@ export function getNavItems(role: UserRole): NavEntry[] {
     items.push(
       { type: "section", name: "Acadèmic" },
       { type: "link", name: "Alumnes", href: "/alumnes", iconName: "GraduationCap" },
+    );
+  }
+
+  if (canView(role, "configuracio_pi")) {
+    items.push(
+      { type: "section", name: "Configuració" },
+      { type: "link", name: "Config PI", href: "/configuracio/pi", iconName: "Settings" },
     );
   }
 

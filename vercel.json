@@ -5,7 +5,7 @@
       "schedule": "0 * * * *"
     },
     {
-      "path": "/api/cron/sync-students",
+      "path": "/api/cron/sync-clickedu",
       "schedule": "0 5 * * 1-5"
     }
   ]

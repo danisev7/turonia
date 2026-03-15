@@ -9,12 +9,14 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, FileDown, PanelTop, List, ChevronDown, Pencil, Save, X } from "lucide-react";
+import { ArrowLeft, ArrowUp, FileDown, PanelTop, List, ChevronDown, Pencil, Save, X } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { StudentInfoTab } from "@/components/alumnes/student-info-tab";
 import type { EditableTabRef } from "@/components/alumnes/student-info-tab";
 import { StudentNeseTab } from "@/components/alumnes/student-nese-tab";
 import { StudentEvolutionTab } from "@/components/alumnes/student-evolution-tab";
+import { StudentPiTab } from "@/components/alumnes/pi/student-pi-tab";
+import type { PiState } from "@/components/alumnes/pi/student-pi-tab";
 import type { UserRole } from "@/types";
 import { canEdit } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
@@ -58,12 +60,18 @@ export default function StudentDetailPage({
   const [saving, setSaving] = useState(false);
   const infoTabRef = useRef<EditableTabRef>(null);
   const neseTabRef = useRef<EditableTabRef>(null);
+  const piTabRef = useRef<EditableTabRef>(null);
+
+  // Scroll-to-top state
+  const [showScrollTop, setShowScrollTop] = useState(false);
+  const mainRef = useRef<HTMLElement | null>(null);
 
   // Sections open state for scroll mode
-  const [openSections, setOpenSections] = useState({
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>({
     info: true,
     nese: true,
     evolution: true,
+    pi: true,
   });
 
   // Load view preference from localStorage
@@ -84,6 +92,20 @@ export default function StudentDetailPage({
 
   const toggleSection = useCallback((section: keyof typeof openSections) => {
     setOpenSections((prev) => ({ ...prev, [section]: !prev[section] }));
+  }, []);
+
+  // Scroll listener for scroll-to-top button
+  useEffect(() => {
+    const main = document.querySelector("main");
+    if (!main) return;
+    mainRef.current = main;
+    const handleScroll = () => setShowScrollTop(main.scrollTop > 300);
+    main.addEventListener("scroll", handleScroll, { passive: true });
+    return () => main.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  const scrollToTop = useCallback(() => {
+    mainRef.current?.scrollTo({ top: 0, behavior: "smooth" });
   }, []);
 
   const fetchData = useCallback(async () => {
@@ -171,12 +193,42 @@ export default function StudentDetailPage({
     [data?.currentYear, id]
   );
 
+  const handleSavePi = useCallback(
+    async (piState: PiState) => {
+      if (!data?.currentYear) return;
+      const res = await fetch(`/api/students/${id}/pi`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          schoolYearId: data.currentYear.id,
+          document: piState.document,
+          materies: piState.materies,
+          professionals: piState.professionals,
+          orientacions: piState.orientacions,
+          compTransversals: piState.compTransversals,
+          signatures: piState.signatures,
+          reunions: piState.reunions,
+          continuitat: piState.continuitat,
+          materiaMesures: piState.materiaMesures,
+          materiaCurriculum: piState.materiaCurriculum,
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        alert(err.error || "Error desant PI");
+        throw new Error(err.error);
+      }
+    },
+    [data?.currentYear, id]
+  );
+
   const handleSaveAll = useCallback(async () => {
     setSaving(true);
     try {
       await Promise.all([
         infoTabRef.current?.save(),
         neseTabRef.current?.save(),
+        piTabRef.current?.save(),
       ]);
       await fetchData();
       setEditing(false);
@@ -190,6 +242,7 @@ export default function StudentDetailPage({
   const handleCancelAll = useCallback(() => {
     infoTabRef.current?.cancel();
     neseTabRef.current?.cancel();
+    piTabRef.current?.cancel();
     setEditing(false);
   }, []);
 
@@ -215,11 +268,16 @@ export default function StudentDetailPage({
 
   const canEditAny =
     canEdit(data.userRole, "alumnes") ||
-    canEdit(data.userRole, "alumnes_nese");
+    canEdit(data.userRole, "alumnes_nese") ||
+    canEdit(data.userRole, "alumnes_pi");
+
+  // Check if PI tab should be shown
+  const mesuraNese = data.neseData?.mesura_nese || "";
+  const showPiTab = typeof mesuraNese === "string" && mesuraNese.startsWith("pi");
 
   const sections = [
     {
-      key: "info" as const,
+      key: "info",
       title: "Traspàs tutoria",
       content: (
         <StudentInfoTab
@@ -234,7 +292,7 @@ export default function StudentDetailPage({
       ),
     },
     {
-      key: "nese" as const,
+      key: "nese",
       title: "Dades NESE",
       content: (
         <StudentNeseTab
@@ -248,8 +306,26 @@ export default function StudentDetailPage({
         />
       ),
     },
+    ...(showPiTab
+      ? [
+          {
+            key: "pi",
+            title: "Plantilla PI",
+            content: (
+              <StudentPiTab
+                ref={piTabRef}
+                studentId={id}
+                schoolYearId={data.currentYear?.id || ""}
+                userRole={data.userRole}
+                editing={editing}
+                onSave={handleSavePi}
+              />
+            ),
+          },
+        ]
+      : []),
     {
-      key: "evolution" as const,
+      key: "evolution",
       title: "Evolució",
       content: <StudentEvolutionTab allYearlyData={data.allYearlyData} />,
     },
@@ -257,7 +333,10 @@ export default function StudentDetailPage({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className={cn(
+        "flex items-center justify-between",
+        "sticky -top-4 lg:-top-6 z-10 bg-background pt-4 lg:pt-6 pb-3 -mt-4 -mx-4 px-4 lg:-mt-6 lg:-mx-6 lg:px-6 mb-2 border-b"
+      )}>
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="sm" onClick={() => router.back()}>
             <ArrowLeft className="h-4 w-4 mr-1" />
@@ -386,6 +465,20 @@ export default function StudentDetailPage({
           ))}
         </div>
       )}
+
+      {/* Scroll-to-top floating button */}
+      <button
+        onClick={scrollToTop}
+        aria-label="Pujar al principi"
+        className={cn(
+          "fixed bottom-6 right-6 z-50 rounded-full bg-primary text-primary-foreground shadow-lg p-3 transition-all duration-300 hover:bg-primary/90 cursor-pointer",
+          showScrollTop
+            ? "opacity-100 translate-y-0"
+            : "opacity-0 translate-y-4 pointer-events-none"
+        )}
+      >
+        <ArrowUp className="h-5 w-5" />
+      </button>
 
       {/* Bottom action bar — only in edit mode */}
       {editing && (

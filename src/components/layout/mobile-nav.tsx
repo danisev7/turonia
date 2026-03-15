@@ -7,6 +7,7 @@ import {
   LayoutDashboard,
   FileText,
   GraduationCap,
+  Settings,
   X,
   type LucideIcon,
 } from "lucide-react";
@@ -24,6 +25,7 @@ const iconMap: Record<string, LucideIcon> = {
   LayoutDashboard,
   FileText,
   GraduationCap,
+  Settings,
 };
 
 interface MobileNavProps {
